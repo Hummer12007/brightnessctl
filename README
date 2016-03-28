@@ -1,0 +1,18 @@
+brightnessctl 0.1 - read and control device brightness.
+
+Usage: brightnessctl [options] [operation] [value]
+
+Options:
+  -l, --list			list devices with available brightness controls.
+  -q, --quiet			suppress output.
+  -p, --pretend			do not perform write operations.
+  -m, --machine-readable	produce machine-readable output.
+  -d, --device=DEVICE		specify device name.
+  -c, --class=CLASS		specify device class.
+  -h, --help			print this help.
+
+Operations:
+  g, get			get current brightness of the device.
+  m, max			get maximum brightness of the device.
+  s, set VALUE			set brightness of the device.
+
