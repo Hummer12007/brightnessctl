@@ -391,11 +391,11 @@ int save_device_data(struct device *dev) {
 	}
 	if (!S_ISDIR(sb.st_mode))
 		goto fail;
-	if (!(fp = fopen(d_path, "w"))) {
+	if (!(fp = fopen(d_path, "w")))
 		goto fail;
-	}
 	if (fwrite(c, 1, s + 1, fp) < s + 1)
-		goto fail;
+		errno = -1;
+	fclose(fp);
 fail:
 	free(c_path);
 	free(d_path);
@@ -414,6 +414,7 @@ int restore_device_data(struct device *dev) {
 	if (!(fp = fopen(filename, "r")))
 		goto fail;
 	fread(buf, 15, 1, fp);
+	fclose(fp);
 	dev->curr_brightness = strtol(buf, &end, 10);
 	if (end == buf)
 		errno = -1;
