@@ -1,6 +1,6 @@
 all: brightnessctl
 VERSION=0.1
-PREFIX=/usr
+PREFIX=/usr/local
 CFLAGS=-Wall -Wextra -DVERSION=\"${VERSION}\"
 
 install: brightnessctl

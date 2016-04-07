@@ -3,6 +3,7 @@
 #endif
 #include <sys/types.h>
 #include <sys/utsname.h>
+#include <sys/stat.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
@@ -11,16 +12,17 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#define str(x) #x
 
 static char *path = "/sys/class";
 static char *classes[] = { "backlight", "leds", NULL };
 static char *default_device = "acpi_video0";
 
+static char *run_dir = "/tmp/brightnessctl";
+
 struct value;
 struct device;
 
-void fail(int, char *, ...);
+void fail(char *, ...);
 void usage(void);
 char *cat_with(char, ...);
 char *dir_child(char *, char*);
@@ -36,6 +38,9 @@ int read_devices(struct device **);
 int print_device(struct device *);
 int list_devices(struct device **);
 struct device *find_device(struct device **, char *);
+int save_device_data(struct device *);
+int restore_device_data(struct device *);
+static int ensure_run_dir();
 
 struct device {
 	char *class;
@@ -66,6 +71,8 @@ struct params {
 	unsigned int pretend : 1;
 	unsigned int mach : 1;
 	unsigned int operation : 2;
+	unsigned int save : 1;
+	unsigned int restore : 1;
 };
 
 static struct params p;
@@ -75,6 +82,8 @@ static const struct option options[] = {
 	{"quiet", no_argument, NULL, 'q'},
 	{"pretend", no_argument, NULL, 'p'},
 	{"machine-readable", no_argument, NULL, 'm'},
+	{"save", no_argument, NULL, 's'},
+	{"restore", no_argument, NULL, 'r'},
 	{"help", no_argument, NULL, 'h'},
 	{"class", required_argument, NULL, 'c'},
 	{"device", required_argument, NULL, 'd'},
@@ -87,11 +96,11 @@ int main(int argc, char **argv) {
 	char *dev_name;
 	int n, c, phelp = 0;
 	if (uname(&name))
-		fail(-1, "Unable to determine current OS. Exiting!\n");
+		fail("Unable to determine current OS. Exiting!\n");
 	if (strcmp(name.sysname, "Linux"))
-		fail(-1, "This program only supports Linux.\n");
+		fail("This program only supports Linux.\n");
 	while (1) {
-		if ((c = getopt_long(argc, argv, "lqpmhc:d:", options, NULL)) < 0)
+		if ((c = getopt_long(argc, argv, "lqpmsrhc:d:", options, NULL)) < 0)
 			break;
 		switch (c) {
 		case 'l':
@@ -103,12 +112,18 @@ int main(int argc, char **argv) {
 		case 'p':
 			p.pretend = 1;
 			break;
+		case 's':
+			p.save = 1;
+			break;
+		case 'r':
+			p.restore = 1;
+			break;
 		case 'm':
 			p.mach = 1;
 			break;
 		case 'h':
 			usage();
-			exit(1);
+			exit(EXIT_SUCCESS);
 			break;
 		case 'c':
 			p.class = strdup(optarg);
@@ -128,10 +143,10 @@ int main(int argc, char **argv) {
 	argv += optind;
 	if (p.class) {
 		if (!(n = read_class(devs, p.class)))
-			fail(-1, "Failed to read any devices of class '%s'.\n", p.class);
+			fail("Failed to read any devices of class '%s'.\n", p.class);
 	} else {
 		if (!(n = read_devices(devs)))
-			fail(-1, "Failed to read any devices.\n");
+			fail("Failed to read any devices.\n");
 	}
 	devs[n] = NULL;
 	if (p.list) {
@@ -152,18 +167,24 @@ int main(int argc, char **argv) {
 	argc--;
 	argv++;
 	if (p.operation == SET && argc == 0)
-		fail(-1, "You need to provide a value to set.\n");
+		fail("You need to provide a value to set.\n");
 	if (p.operation == SET && parse_value(&p.val, argv[0]))
-		fail(-1, "Invalid value given");
+		fail("Invalid value given");
 	if (!(dev = find_device(devs, dev_name)))
-		fail(-1, "Device '%s' not found.\n", dev_name);
+		fail("Device '%s' not found.\n", dev_name);
 	if (p.operation == SET && !p.pretend && geteuid())
-		fail(EPERM, "You need to run this program as root to be able to modify values!\n");
+		fail("You need to run this program as root to be able to modify values!\n");
+	if (p.save)
+		if (save_device_data(dev))
+			fprintf(stderr, "Could not save data for device '%s'.\n", dev_name);
+	if (p.restore) {
+		restore_device_data(dev);
+		write_device(dev);
+	}
 	return apply_operation(dev, p.operation, &p.val);
 }
 
 int apply_operation(struct device *dev, unsigned int operation, struct value *val) {
-	int retval = 0;
 	switch (operation) {
 	case GET:
 		return print_device(dev);
@@ -182,7 +203,7 @@ int apply_operation(struct device *dev, unsigned int operation, struct value *va
 		}
 	fail:
 	default:
-		return retval;
+		return 0;
 	}
 }
 
@@ -348,6 +369,75 @@ int read_devices(struct device **devs) {
 	return cnt;
 }
 
+int save_device_data(struct device *dev) {
+	struct stat sb;
+	char c[16];
+	size_t s = sprintf(c, "%u", dev->curr_brightness);
+	char *c_path = dir_child(run_dir, dev->class);
+	char *d_path = dir_child(c_path, dev->id);
+	FILE *fp;
+	errno = 0;
+	if (!s) {
+		errno = -1;
+		goto fail;
+	}
+	if (!ensure_run_dir())
+		goto fail;
+	if (stat(c_path, &sb)) {
+		if (errno != ENOENT)
+			goto fail;
+		if (mkdir(c_path, 0777))
+			goto fail;
+	}
+	if (!S_ISDIR(sb.st_mode))
+		goto fail;
+	if (!(fp = fopen(d_path, "w"))) {
+		goto fail;
+	}
+	if (fwrite(c, 1, s + 1, fp) < s + 1)
+		goto fail;
+fail:
+	free(c_path);
+	free(d_path);
+	if (errno)
+		perror("Error saving device data");
+	return errno;
+}
+
+int restore_device_data(struct device *dev) {
+	char buf[16];
+	char *filename = cat_with('/', run_dir, dev->class, dev->id, NULL);
+	char *end;
+	FILE *fp;
+	memset(buf, 0, 16);
+	errno = 0;
+	if (!(fp = fopen(filename, "r")))
+		goto fail;
+	fread(buf, 15, 1, fp);
+	dev->curr_brightness = strtol(buf, &end, 10);
+	if (end == buf)
+		errno = -1;
+fail:
+	if (errno) {
+		perror("Error restoring device data");
+		dev->curr_brightness = dev->max_brightness;
+	}
+	free(filename);
+	return errno;
+}
+
+
+static int ensure_run_dir() {
+	struct stat sb;
+	if (stat(run_dir, &sb)) {
+		if (errno != ENOENT)
+			return 0;
+		if (mkdir(run_dir, 0777)) {
+			return 0;
+		}
+	}
+	return S_ISDIR(sb.st_mode);
+}
 
 char *cat_with(char c, ...) {
 	size_t size = 32;
@@ -381,12 +471,12 @@ char *class_path(char *class) {
 	return dir_child(path, class);
 }
 
-void fail(int errcode, char *err_msg, ...) {
+void fail(char *err_msg, ...) {
 	va_list va;
 	va_start(va, err_msg);
 	vfprintf(stderr, err_msg, va);
-	exit(errcode);
 	va_end(va);
+	exit(EXIT_FAILURE);
 }
 
 void usage() {
@@ -399,9 +489,11 @@ Options:\n\
   -q, --quiet\t\t\tsuppress output.\n\
   -p, --pretend\t\t\tdo not perform write operations.\n\
   -m, --machine-readable\tproduce machine-readable output.\n\
+  -s, --save\t\t\tsave previous state in a temporary file.\n\
+  -r, --restore\t\t\trestore previous saved state.\n\
+  -h, --help\t\t\tprint this help.\n\
   -d, --device=DEVICE\t\tspecify device name.\n\
   -c, --class=CLASS\t\tspecify device class.\n\
-  -h, --help\t\t\tprint this help.\n\
 \n\
 Operations:\n\
   g, get\t\t\tget current brightness of the device.\n\
