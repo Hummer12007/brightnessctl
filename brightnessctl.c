@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
 	}
 	if (phelp) {
 		usage();
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	argc -= optind;
 	argv += optind;
@@ -189,7 +189,7 @@ int apply_operation(struct device *dev, unsigned int operation, struct value *va
 	case GET:
 		return print_device(dev);
 	case MAX:
-		fprintf(stdout, "%d\n", dev->max_brightness);
+		fprintf(stdout, "%u\n", dev->max_brightness);
 		return 0;
 	case SET:
 		apply_value(dev, val);
@@ -264,12 +264,12 @@ int print_device(struct device *dev) {
 }
 
 void apply_value(struct device *d, struct value *val) {
-	long new, mod = labs(val->v_type == ABSOLUTE ? 
-			val->val : val->val / 100.0 * d->max_brightness);
+	long new, mod = val->v_type == ABSOLUTE ?
+			val->val : val->val / 100.0 * d->max_brightness;
 	if (val->d_type == DIRECT) {
-		new = mod > d->max_brightness ? d->max_brightness: mod;
+		new = mod > d->max_brightness ? d->max_brightness : mod;
 		goto apply;
-		}
+	}
 	mod *= val->sign == PLUS ? 1 : -1;
 	new = d->curr_brightness + mod;
 	if (new < 0)
@@ -291,10 +291,12 @@ int write_device(struct device *d) {
 	}
 	if ((f = fopen(dir_child(device_path(d), "brightness"), "w"))) {
 		if (fwrite(c, 1, s + 1, f) < s + 1)
-			goto fail;
+			goto close;
 	} else
 		goto fail;
 	errno = 0;
+close:
+	fclose(f);
 fail:
 	if (errno)
 		perror("Error writing device");
