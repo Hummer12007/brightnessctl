@@ -1,12 +1,10 @@
-#ifdef linux
-#define _GNU_SOURCE
-#endif
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
+#include <limits.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -78,15 +76,16 @@ struct params {
 static struct params p;
 
 static const struct option options[] = {
-	{"list", no_argument, NULL, 'l'},
-	{"quiet", no_argument, NULL, 'q'},
-	{"pretend", no_argument, NULL, 'p'},
-	{"machine-readable", no_argument, NULL, 'm'},
-	{"save", no_argument, NULL, 's'},
-	{"restore", no_argument, NULL, 'r'},
-	{"help", no_argument, NULL, 'h'},
 	{"class", required_argument, NULL, 'c'},
 	{"device", required_argument, NULL, 'd'},
+	{"help", no_argument, NULL, 'h'},
+	{"list", no_argument, NULL, 'l'},
+	{"machine-readable", no_argument, NULL, 'm'},
+	{"quiet", no_argument, NULL, 'q'},
+	{"pretend", no_argument, NULL, 'p'},
+	{"restore", no_argument, NULL, 'r'},
+	{"save", no_argument, NULL, 's'},
+	{NULL,}
 };
 
 int main(int argc, char **argv) {
@@ -124,7 +123,6 @@ int main(int argc, char **argv) {
 		case 'h':
 			usage();
 			exit(EXIT_SUCCESS);
-			break;
 		case 'c':
 			p.class = strdup(optarg);
 			break;
@@ -215,7 +213,7 @@ int parse_value(struct value *val, char *str) {
 	n = strtol(str, &buf, 10);
 	if (errno || buf == str)
 		return -1;
-	val->val = labs(n);
+	val->val = labs(n) % LONG_MAX;
 	val->v_type = ABSOLUTE;
 	val->d_type = DIRECT;
 	val->sign = PLUS;
