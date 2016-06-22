@@ -13,7 +13,6 @@
 
 static char *path = "/sys/class";
 static char *classes[] = { "backlight", "leds", NULL };
-static char *default_device = "acpi_video0";
 
 static char *run_dir = "/tmp/brightnessctl";
 
@@ -150,7 +149,7 @@ int main(int argc, char **argv) {
 	if (p.list) {
 		return list_devices(devs);
 	}
-	dev_name = p.device ? p.device : default_device;
+	dev_name = p.device;
 	if (argc == 0)
 		p.operation = GET;
 	else switch (argv[0][0]) {
@@ -235,6 +234,8 @@ int parse_value(struct value *val, char *str) {
 
 struct device *find_device(struct device **devs, char *name) {
 	struct device *dev;
+	if (!name)
+		return *devs;
 	while ((dev = *(devs++)))
 		if (!strcmp(dev->id, name))
 			return dev;
