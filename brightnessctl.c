@@ -189,7 +189,7 @@ int apply_operation(struct device *dev, unsigned int operation, struct value *va
 		return print_device(dev);
 	case GET:
 		fprintf(stdout, "%u\n", dev->curr_brightness);
-        return 0;
+		return 0;
 	case MAX:
 		fprintf(stdout, "%u\n", dev->max_brightness);
 		return 0;
