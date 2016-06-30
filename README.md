@@ -40,6 +40,7 @@ Options:
   -c, --class=CLASS		specify device class.
 
 Operations:
+  i, info			get device info.
   g, get			get current brightness of the device.
   m, max			get maximum brightness of the device.
   s, set VALUE			set brightness of the device.
