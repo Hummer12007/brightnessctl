@@ -57,7 +57,7 @@ struct value {
 	unsigned int sign : 1;
 };
 
-enum operation { GET, MAX, SET };
+enum operation { INFO, GET, MAX, SET };
 
 struct params {
 	char *class;
@@ -151,15 +151,17 @@ int main(int argc, char **argv) {
 	}
 	dev_name = p.device;
 	if (argc == 0)
-		p.operation = GET;
+		p.operation = INFO;
 	else switch (argv[0][0]) {
 	case 'm':
 		p.operation = MAX; break;
 	case 's':
 		p.operation = SET; break;
-	default:
 	case 'g':
 		p.operation = GET; break;
+	default:
+	case 'i':
+		p.operation = INFO; break;
 	}
 	argc--;
 	argv++;
@@ -183,8 +185,11 @@ int main(int argc, char **argv) {
 
 int apply_operation(struct device *dev, unsigned int operation, struct value *val) {
 	switch (operation) {
-	case GET:
+	case INFO:
 		return print_device(dev);
+	case GET:
+		fprintf(stdout, "%u\n", dev->curr_brightness);
+        return 0;
 	case MAX:
 		fprintf(stdout, "%u\n", dev->max_brightness);
 		return 0;
@@ -498,6 +503,7 @@ Options:\n\
   -c, --class=CLASS\t\tspecify device class.\n\
 \n\
 Operations:\n\
+  i, info\t\t\tget device info.\n\
   g, get\t\t\tget current brightness of the device.\n\
   m, max\t\t\tget maximum brightness of the device.\n\
   s, set VALUE\t\t\tset brightness of the device.\n\
