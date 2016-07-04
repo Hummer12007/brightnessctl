@@ -290,7 +290,7 @@ int write_device(struct device *d) {
 		goto fail;
 	}
 	if ((f = fopen(dir_child(device_path(d), "brightness"), "w"))) {
-		if (fwrite(c, 1, s + 1, f) < s + 1)
+		if (fwrite(c, 1, s, f) < s)
 			goto close;
 	} else
 		goto fail;
