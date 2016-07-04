@@ -21,7 +21,8 @@ struct device;
 
 void fail(char *, ...);
 void usage(void);
-char *cat_with(char, ...);
+#define cat_with(...) _cat_with(__VA_ARGS__, NULL)
+char *_cat_with(char, ...);
 char *dir_child(char *, char*);
 char *device_path(struct device *);
 char *class_path(char *);
@@ -407,7 +408,7 @@ fail:
 
 int restore_device_data(struct device *dev) {
 	char buf[16];
-	char *filename = cat_with('/', run_dir, dev->class, dev->id, NULL);
+	char *filename = cat_with('/', run_dir, dev->class, dev->id);
 	char *end;
 	FILE *fp;
 	memset(buf, 0, 16);
@@ -441,7 +442,7 @@ static int ensure_run_dir() {
 	return S_ISDIR(sb.st_mode);
 }
 
-char *cat_with(char c, ...) {
+char *_cat_with(char c, ...) {
 	size_t size = 32;
 	size_t length = 0;
 	char *buf = calloc(1, size + 1);
@@ -462,11 +463,11 @@ char *cat_with(char c, ...) {
 }
 
 char *dir_child(char *parent, char *child) {
-	return cat_with('/', parent, child, NULL);
+	return cat_with('/', parent, child);
 }
 
 char *device_path(struct device *dev) {
-	return cat_with('/', path, dev->class, dev->id, NULL);
+	return cat_with('/', path, dev->class, dev->id);
 }
 
 char *class_path(char *class) {
