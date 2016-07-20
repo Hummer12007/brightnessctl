@@ -1,4 +1,4 @@
-brightnessctl 0.1 - read and control device brightness.
+brightnessctl 0.1.1 - read and control device brightness.
 
 Usage: brightnessctl [options] [operation] [value]
 
