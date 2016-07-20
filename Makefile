@@ -1,5 +1,5 @@
 all: brightnessctl
-VERSION=0.1
+VERSION=0.1.1
 PREFIX=/usr/local
 CFLAGS=-ggdb -Wall -Wextra -DVERSION=\"${VERSION}\" -D_GNU_SOURCE
 
