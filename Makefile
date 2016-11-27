@@ -7,7 +7,7 @@ all: brightnessctl
 
 install: brightnessctl
 	install -d ${DESTDIR}/bin
-	install -m 4711 brightnessctl ${DESTDIR}/bin/
+	install -m 4755 -p brightnessctl ${DESTDIR}/bin/
 
 clean:
 	rm -f brightnessctl
