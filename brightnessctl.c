@@ -502,6 +502,12 @@ Operations:\n\
   g, get\t\t\tget current brightness of the device.\n\
   m, max\t\t\tget maximum brightness of the device.\n\
   s, set VALUE\t\t\tset brightness of the device.\n\
+\n\
+Valid values:\n\
+  specific value\t\tExample: 500\n\
+  percentage value\t\tExample: 50%%\n\
+  specific delta\t\tExample: 50-\n\
+  percentage delta\t\tExample: 50%%-\n\
 \n");
 }
 
