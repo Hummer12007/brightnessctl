@@ -405,7 +405,7 @@ int save_device_data(struct device *dev) {
 		goto fail;
 	if (!(fp = fopen(d_path, "w")))
 		goto fail;
-	if (fwrite(c, 1, s + 1, fp) < s + 1)
+	if (fwrite(c, 1, s, fp) < s)
 		errno = -1;
 	fclose(fp);
 fail:
