@@ -292,8 +292,8 @@ int write_device(struct device *d) {
 	char c[16];
 	size_t s = sprintf(c, "%u", d->curr_brightness);
 	errno = 0;
-	if (!s) {
-		errno = -1;
+	if (s <= 0) {
+		errno = EINVAL;
 		goto fail;
 	}
 	if ((f = fopen(dir_child(device_path(d), "brightness"), "w"))) {
@@ -314,7 +314,7 @@ int read_device(struct device *d, char *class, char *id) {
 	DIR *dirp;
 	FILE *f;
 	char *dev_path;
-	int done_read = 0;
+	int error = 0;
 	struct dirent *ent;
 	d->class = strdup(class);
 	d->id = strdup(id);
@@ -326,14 +326,28 @@ int read_device(struct device *d, char *class, char *id) {
 			continue;
 		if (!strcmp(ent->d_name, "brightness")) {
 			if ((f = fopen(dir_child(dev_path, ent->d_name), "r"))) {
-				done_read += fscanf(f, "%u", &d->curr_brightness);
+				clearerr(f);
+				if (fscanf(f, "%u", &d->curr_brightness) == EOF) {
+					fprintf(stderr, "End-of-file reading brightness of device '%s'.", d->id);
+					error++;
+				} else if (ferror(f)) {
+					fprintf(stderr, "Error reading brightness of device '%s': %s.", d->id, strerror(errno));
+					error++;
+				}
 				fclose(f);
 			} else
 				goto fail;
 		}
 		if (!strcmp(ent->d_name, "max_brightness")) {
 			if ((f = fopen(dir_child(dev_path, ent->d_name), "r"))) {
-				done_read += fscanf(f, "%u", &d->max_brightness);
+				clearerr(f);
+				if (fscanf(f, "%u", &d->max_brightness) == EOF) {
+					fprintf(stderr, "End-of-file reading max brightness of device '%s'.", d->id);
+					error++;
+				} else if (ferror(f)) {
+					fprintf(stderr, "Error reading max brightness of device '%s': %s.", d->id, strerror(errno));
+					error++;
+				}
 				fclose(f);
 			} else
 				goto fail;
@@ -342,11 +356,11 @@ int read_device(struct device *d, char *class, char *id) {
 	errno = 0;
 fail:
 	closedir(dirp);
-	if (!errno && !done_read)
-		errno = -1;
-	if (errno)
+	if (errno) {
 		perror("Error reading device");
-	return errno;
+		error++;
+	}
+	return error;
 }
 
 int read_class(struct device **devs, char *class) {
@@ -385,9 +399,11 @@ int save_device_data(struct device *dev) {
 	char *c_path = dir_child(run_dir, dev->class);
 	char *d_path = dir_child(c_path, dev->id);
 	FILE *fp;
+	int error = 0;
 	errno = 0;
-	if (!s) {
-		errno = -1;
+	if (s <= 0) {
+		fprintf(stderr, "Error converting device data.");
+		error++;
 		goto fail;
 	}
 	if (!ensure_run_dir())
@@ -405,15 +421,19 @@ int save_device_data(struct device *dev) {
 		goto fail;
 	if (!(fp = fopen(d_path, "w")))
 		goto fail;
-	if (fwrite(c, 1, s, fp) < s)
-		errno = -1;
+	if (fwrite(c, 1, s, fp) < s) {
+		fprintf(stderr, "Error writing to '%s'.\n", d_path);
+		error++;
+	}
 	fclose(fp);
 fail:
 	free(c_path);
 	free(d_path);
-	if (errno)
+	if (errno) {
 		perror("Error saving device data");
-	return errno;
+		error++;
+	}
+	return error;
 }
 
 int restore_device_data(struct device *dev) {
@@ -429,7 +449,7 @@ int restore_device_data(struct device *dev) {
 	fclose(fp);
 	dev->curr_brightness = strtol(buf, &end, 10);
 	if (end == buf)
-		errno = -1;
+		errno = EINVAL;
 fail:
 	if (errno) {
 		perror("Error restoring device data");
