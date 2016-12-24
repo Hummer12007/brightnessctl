@@ -463,8 +463,10 @@ char *_cat_with(char c, ...) {
 		while (length + 2 > size)
 			buf = realloc(buf, size *= 2);
 		strcat(buf, curr);
-		if ((curr = va_arg(va, char*)))
+		if ((curr = va_arg(va, char*))) {
+			length++;
 			strcat(buf, split);
+		}
 	}
 	return buf;
 }
