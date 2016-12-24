@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
 		fail("Invalid value given");
 	if (!(dev = find_device(devs, dev_name)))
 		fail("Device '%s' not found.\n", dev_name);
-	if (p.operation == SET && !p.pretend && geteuid())
+	if ((p.operation == SET || p.restore) && !p.pretend && geteuid())
 		fail("You need to run this program as root to be able to modify values!\n");
 	if (p.save)
 		if (save_device_data(dev))
