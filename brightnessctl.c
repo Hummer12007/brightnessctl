@@ -395,7 +395,10 @@ int save_device_data(struct device *dev) {
 	if (stat(c_path, &sb)) {
 		if (errno != ENOENT)
 			goto fail;
+		errno = 0;
 		if (mkdir(c_path, 0777))
+			goto fail;
+		if (stat(c_path, &sb))
 			goto fail;
 	}
 	if (!S_ISDIR(sb.st_mode))
@@ -442,9 +445,12 @@ static int ensure_run_dir() {
 	if (stat(run_dir, &sb)) {
 		if (errno != ENOENT)
 			return 0;
+		errno = 0;
 		if (mkdir(run_dir, 0777)) {
 			return 0;
 		}
+		if (stat(run_dir, &sb))
+			return 0;
 	}
 	return S_ISDIR(sb.st_mode);
 }
