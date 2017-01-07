@@ -210,6 +210,9 @@ int parse_value(struct value *val, char *str) {
 	char c;
 	char *buf;
 	errno = 0;
+	val->v_type = ABSOLUTE;
+	val->d_type = DIRECT;
+	val->sign = PLUS;
 	if (!str || !*str)
 		return -1;
 	if (*str == '+' || *str == '-') {
@@ -221,9 +224,6 @@ int parse_value(struct value *val, char *str) {
 	if (errno || buf == str)
 		return -1;
 	val->val = labs(n) % LONG_MAX;
-	val->v_type = ABSOLUTE;
-	val->d_type = DIRECT;
-	val->sign = PLUS;
 	while ((c = *(buf++))) switch(c) {
 	case '+':
 		val->sign = PLUS;
