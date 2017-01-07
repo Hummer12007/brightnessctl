@@ -210,6 +210,13 @@ int parse_value(struct value *val, char *str) {
 	char c;
 	char *buf;
 	errno = 0;
+	if (!str || !*str)
+		return -1;
+	if (*str == '+' || *str == '-') {
+		val->sign = *str == '+' ? PLUS : MINUS;
+		val->d_type = DELTA;
+		str++;
+	}
 	n = strtol(str, &buf, 10);
 	if (errno || buf == str)
 		return -1;
