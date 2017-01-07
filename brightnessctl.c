@@ -513,8 +513,8 @@ Operations:\n\
 Valid values:\n\
   specific value\t\tExample: 500\n\
   percentage value\t\tExample: 50%%\n\
-  specific delta\t\tExample: 50-\n\
-  percentage delta\t\tExample: 50%%-\n\
+  specific delta\t\tExample: 50- or +10\n\
+  percentage delta\t\tExample: 50%%- or +10%%\n\
 \n");
 }
 
