@@ -151,6 +151,8 @@ int main(int argc, char **argv) {
 		return list_devices(devs);
 	}
 	dev_name = p.device;
+	if (!dev_name)
+		dev_name = devs[0]->id;
 	if (argc == 0)
 		p.operation = GET;
 	else switch (argv[0][0]) {
@@ -170,7 +172,7 @@ int main(int argc, char **argv) {
 		fail("Invalid value given");
 	if (!(dev = find_device(devs, dev_name)))
 		fail("Device '%s' not found.\n", dev_name);
-	if (p.operation == SET && !p.pretend && geteuid())
+	if ((p.operation == SET || p.restore) && !p.pretend && geteuid())
 		fail("You need to run this program as root to be able to modify values!\n");
 	if (p.save)
 		if (save_device_data(dev))
@@ -242,8 +244,6 @@ int parse_value(struct value *val, char *str) {
 
 struct device *find_device(struct device **devs, char *name) {
 	struct device *dev;
-	if (!name)
-		return *devs;
 	while ((dev = *(devs++)))
 		if (!strcmp(dev->id, name))
 			return dev;
@@ -292,8 +292,8 @@ int write_device(struct device *d) {
 	char c[16];
 	size_t s = sprintf(c, "%u", d->curr_brightness);
 	errno = 0;
-	if (!s) {
-		errno = -1;
+	if (s <= 0) {
+		errno = EINVAL;
 		goto fail;
 	}
 	if ((f = fopen(dir_child(device_path(d), "brightness"), "w"))) {
@@ -314,7 +314,7 @@ int read_device(struct device *d, char *class, char *id) {
 	DIR *dirp;
 	FILE *f;
 	char *dev_path;
-	int done_read = 0;
+	int error = 0;
 	struct dirent *ent;
 	d->class = strdup(class);
 	d->id = strdup(id);
@@ -326,14 +326,28 @@ int read_device(struct device *d, char *class, char *id) {
 			continue;
 		if (!strcmp(ent->d_name, "brightness")) {
 			if ((f = fopen(dir_child(dev_path, ent->d_name), "r"))) {
-				done_read += fscanf(f, "%u", &d->curr_brightness);
+				clearerr(f);
+				if (fscanf(f, "%u", &d->curr_brightness) == EOF) {
+					fprintf(stderr, "End-of-file reading brightness of device '%s'.", d->id);
+					error++;
+				} else if (ferror(f)) {
+					fprintf(stderr, "Error reading brightness of device '%s': %s.", d->id, strerror(errno));
+					error++;
+				}
 				fclose(f);
 			} else
 				goto fail;
 		}
 		if (!strcmp(ent->d_name, "max_brightness")) {
 			if ((f = fopen(dir_child(dev_path, ent->d_name), "r"))) {
-				done_read += fscanf(f, "%u", &d->max_brightness);
+				clearerr(f);
+				if (fscanf(f, "%u", &d->max_brightness) == EOF) {
+					fprintf(stderr, "End-of-file reading max brightness of device '%s'.", d->id);
+					error++;
+				} else if (ferror(f)) {
+					fprintf(stderr, "Error reading max brightness of device '%s': %s.", d->id, strerror(errno));
+					error++;
+				}
 				fclose(f);
 			} else
 				goto fail;
@@ -342,11 +356,11 @@ int read_device(struct device *d, char *class, char *id) {
 	errno = 0;
 fail:
 	closedir(dirp);
-	if (!errno && !done_read)
-		errno = -1;
-	if (errno)
+	if (errno) {
 		perror("Error reading device");
-	return errno;
+		error++;
+	}
+	return error;
 }
 
 int read_class(struct device **devs, char *class) {
@@ -385,9 +399,11 @@ int save_device_data(struct device *dev) {
 	char *c_path = dir_child(run_dir, dev->class);
 	char *d_path = dir_child(c_path, dev->id);
 	FILE *fp;
+	int error = 0;
 	errno = 0;
-	if (!s) {
-		errno = -1;
+	if (s <= 0) {
+		fprintf(stderr, "Error converting device data.");
+		error++;
 		goto fail;
 	}
 	if (!ensure_run_dir())
@@ -395,22 +411,31 @@ int save_device_data(struct device *dev) {
 	if (stat(c_path, &sb)) {
 		if (errno != ENOENT)
 			goto fail;
+		errno = 0;
 		if (mkdir(c_path, 0777))
 			goto fail;
+		if (stat(c_path, &sb))
+			goto fail;
 	}
-	if (!S_ISDIR(sb.st_mode))
+	if (!S_ISDIR(sb.st_mode)) {
+		errno = ENOTDIR;
 		goto fail;
+	}
 	if (!(fp = fopen(d_path, "w")))
 		goto fail;
-	if (fwrite(c, 1, s + 1, fp) < s + 1)
-		errno = -1;
+	if (fwrite(c, 1, s, fp) < s) {
+		fprintf(stderr, "Error writing to '%s'.\n", d_path);
+		error++;
+	}
 	fclose(fp);
 fail:
 	free(c_path);
 	free(d_path);
-	if (errno)
+	if (errno) {
 		perror("Error saving device data");
-	return errno;
+		error++;
+	}
+	return error;
 }
 
 int restore_device_data(struct device *dev) {
@@ -426,7 +451,7 @@ int restore_device_data(struct device *dev) {
 	fclose(fp);
 	dev->curr_brightness = strtol(buf, &end, 10);
 	if (end == buf)
-		errno = -1;
+		errno = EINVAL;
 fail:
 	if (errno) {
 		perror("Error restoring device data");
@@ -442,11 +467,18 @@ static int ensure_run_dir() {
 	if (stat(run_dir, &sb)) {
 		if (errno != ENOENT)
 			return 0;
+		errno = 0;
 		if (mkdir(run_dir, 0777)) {
 			return 0;
 		}
+		if (stat(run_dir, &sb))
+			return 0;
 	}
-	return S_ISDIR(sb.st_mode);
+	if (!S_ISDIR(sb.st_mode)) {
+		errno = ENOTDIR;
+		return 0;
+	}
+	return 1;
 }
 
 char *_cat_with(char c, ...) {
@@ -463,8 +495,10 @@ char *_cat_with(char c, ...) {
 		while (length + 2 > size)
 			buf = realloc(buf, size *= 2);
 		strcat(buf, curr);
-		if ((curr = va_arg(va, char*)))
+		if ((curr = va_arg(va, char*))) {
+			length++;
 			strcat(buf, split);
+		}
 	}
 	return buf;
 }
