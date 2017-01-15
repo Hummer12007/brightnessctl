@@ -400,6 +400,7 @@ int save_device_data(struct device *dev) {
 	char *c_path = dir_child(run_dir, dev->class);
 	char *d_path = dir_child(c_path, dev->id);
 	FILE *fp;
+	mode_t old = 0;
 	int error = 0;
 	errno = 0;
 	if (s <= 0) {
@@ -411,7 +412,10 @@ int save_device_data(struct device *dev) {
 		goto fail;
 	if (!ensure_dir(c_path))
 		goto fail;
-	if (!(fp = fopen(d_path, "w")))
+	old = umask(0);
+	fp = fopen(d_path, "w");
+	umask(old);
+	if (!fp)
 		goto fail;
 	if (fwrite(c, 1, s, fp) < s) {
 		fprintf(stderr, "Error writing to '%s'.\n", d_path);
