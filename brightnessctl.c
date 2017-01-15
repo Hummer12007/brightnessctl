@@ -320,7 +320,7 @@ int read_device(struct device *d, char *class, char *id) {
 	d->id = strdup(id);
 	dev_path = device_path(d);
 	if (!(dirp = opendir(dev_path)))
-		goto fail;
+		goto dfail;
 	while ((ent = readdir(dirp))) {
 		if (!strcmp(ent->d_name, ".") && !strcmp(ent->d_name, ".."))
 			continue;
@@ -356,6 +356,7 @@ int read_device(struct device *d, char *class, char *id) {
 	errno = 0;
 fail:
 	closedir(dirp);
+dfail:
 	if (errno) {
 		perror("Error reading device");
 		error++;
