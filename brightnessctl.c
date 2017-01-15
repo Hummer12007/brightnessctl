@@ -417,8 +417,10 @@ int save_device_data(struct device *dev) {
 		if (stat(c_path, &sb))
 			goto fail;
 	}
-	if (!S_ISDIR(sb.st_mode))
+	if (!S_ISDIR(sb.st_mode)) {
+		errno = ENOTDIR;
 		goto fail;
+	}
 	if (!(fp = fopen(d_path, "w")))
 		goto fail;
 	if (fwrite(c, 1, s, fp) < s) {
@@ -472,7 +474,11 @@ static int ensure_run_dir() {
 		if (stat(run_dir, &sb))
 			return 0;
 	}
-	return S_ISDIR(sb.st_mode);
+	if (!S_ISDIR(sb.st_mode)) {
+		errno = ENOTDIR;
+		return 0;
+	}
+	return 1;
 }
 
 char *_cat_with(char c, ...) {
