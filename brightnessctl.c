@@ -19,26 +19,27 @@ static char *run_dir = "/tmp/brightnessctl";
 struct value;
 struct device;
 
-void fail(char *, ...);
-void usage(void);
+static void fail(char *, ...);
+static void usage(void);
 #define cat_with(...) _cat_with(__VA_ARGS__, NULL)
-char *_cat_with(char, ...);
-char *dir_child(char *, char*);
-char *device_path(struct device *);
-char *class_path(char *);
-void apply_value(struct device *, struct value *);
-int apply_operation(struct device *, unsigned int, struct value *);
-int parse_value(struct value *, char *);
-int write_device(struct device *);
-int read_device(struct device *, char *, char *);
-int read_class(struct device **, char *);
-int read_devices(struct device **);
-int print_device(struct device *);
-int list_devices(struct device **);
-struct device *find_device(struct device **, char *);
-int save_device_data(struct device *);
-int restore_device_data(struct device *);
-static int ensure_run_dir();
+static char *_cat_with(char, ...);
+static char *dir_child(char *, char*);
+static char *device_path(struct device *);
+static char *class_path(char *);
+static void apply_value(struct device *, struct value *);
+static int apply_operation(struct device *, unsigned int, struct value *);
+static int parse_value(struct value *, char *);
+static int write_device(struct device *);
+static int read_device(struct device *, char *, char *);
+static int read_class(struct device **, char *);
+static int read_devices(struct device **);
+static int print_device(struct device *);
+static int list_devices(struct device **);
+static struct device *find_device(struct device **, char *);
+static int save_device_data(struct device *);
+static int restore_device_data(struct device *);
+static int ensure_dir(char *);
+#define ensure_run_dir() ensure_dir(run_dir)
 
 struct device {
 	char *class;
@@ -394,7 +395,6 @@ int read_devices(struct device **devs) {
 }
 
 int save_device_data(struct device *dev) {
-	struct stat sb;
 	char c[16];
 	size_t s = sprintf(c, "%u", dev->curr_brightness);
 	char *c_path = dir_child(run_dir, dev->class);
@@ -409,19 +409,8 @@ int save_device_data(struct device *dev) {
 	}
 	if (!ensure_run_dir())
 		goto fail;
-	if (stat(c_path, &sb)) {
-		if (errno != ENOENT)
-			goto fail;
-		errno = 0;
-		if (mkdir(c_path, 0777))
-			goto fail;
-		if (stat(c_path, &sb))
-			goto fail;
-	}
-	if (!S_ISDIR(sb.st_mode)) {
-		errno = ENOTDIR;
+	if (!ensure_dir(c_path))
 		goto fail;
-	}
 	if (!(fp = fopen(d_path, "w")))
 		goto fail;
 	if (fwrite(c, 1, s, fp) < s) {
@@ -463,9 +452,9 @@ fail:
 }
 
 
-static int ensure_run_dir() {
+int ensure_dir(char *dir) {
 	struct stat sb;
-	if (stat(run_dir, &sb)) {
+	if (stat(dir, &sb)) {
 		if (errno != ENOENT)
 			return 0;
 		errno = 0;
