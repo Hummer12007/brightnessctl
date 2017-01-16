@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
 	struct device *devs[255];
 	struct device *dev;
 	struct utsname name;
-	char *dev_name;
+	char *dev_name, *file_path;
 	int n, c, phelp = 0;
 	if (uname(&name))
 		fail("Unable to determine current OS. Exiting!\n");
@@ -173,8 +173,16 @@ int main(int argc, char **argv) {
 		fail("Invalid value given");
 	if (!(dev = find_device(devs, dev_name)))
 		fail("Device '%s' not found.\n", dev_name);
-	if ((p.operation == SET || p.restore) && !p.pretend && geteuid())
-		fail("You need to run this program as root to be able to modify values!\n");
+	if ((p.operation == SET || p.restore) && !p.pretend && geteuid()) {
+		errno = 0;
+		file_path = cat_with('/', path, dev->class, dev->id, "brightness");
+		if (access(file_path, W_OK)) {
+			perror("Can't modify brightness");
+			fail("\nYou should run this program with root privileges.\n"
+				"Alternatively, get write permissions for device files.\n");
+		}
+		free(file_path);
+	}
 	if (p.save)
 		if (save_device_data(dev))
 			fprintf(stderr, "Could not save data for device '%s'.\n", dev_name);
