@@ -12,7 +12,9 @@ The program is available in:
 ## Permissions
 
 Modifying brightness requires write permissions for device files. This can be accomplished (without using sudo/su/etc.) by either of the following means:
+
 1) installing brightnessctl as a suid binary (done by default)
+
 2) adding a similar udev rule (assuming your user is in `video` group for backlight and `input` group for leds):
 ```
 ACTION=="add", SUBSYSTEM=="backlight", RUN+="/bin/chgrp video /sys/class/backlight/%k/brightness"
