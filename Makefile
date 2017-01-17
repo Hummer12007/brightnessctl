@@ -1,4 +1,4 @@
-VERSION = 0.1.1
+VERSION = 0.2
 DESTDIR ?= /usr/local
 CFLAGS += -std=c99 -g -Wall -Wextra -DVERSION=\"${VERSION}\" -D_GNU_SOURCE
 MODE ?= 4711
