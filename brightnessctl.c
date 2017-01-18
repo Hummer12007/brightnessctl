@@ -187,8 +187,8 @@ int main(int argc, char **argv) {
 		if (save_device_data(dev))
 			fprintf(stderr, "Could not save data for device '%s'.\n", dev_name);
 	if (p.restore) {
-		restore_device_data(dev);
-		write_device(dev);
+		if (restore_device_data(dev))
+			write_device(dev);
 	}
 	return apply_operation(dev, p.operation, &p.val);
 }
@@ -449,18 +449,20 @@ int restore_device_data(struct device *dev) {
 	errno = 0;
 	if (!(fp = fopen(filename, "r")))
 		goto fail;
-	fread(buf, 15, 1, fp);
-	fclose(fp);
+	if (!fread(buf, 1, 15, fp))
+		goto rfail;
 	dev->curr_brightness = strtol(buf, &end, 10);
 	if (end == buf)
 		errno = EINVAL;
+rfail:
+	fclose(fp);
 fail:
+	free(filename);
 	if (errno) {
 		perror("Error restoring device data");
-		dev->curr_brightness = dev->max_brightness;
+		return 0;
 	}
-	free(filename);
-	return errno;
+	return 1;
 }
 
 
@@ -470,10 +472,10 @@ int ensure_dir(char *dir) {
 		if (errno != ENOENT)
 			return 0;
 		errno = 0;
-		if (mkdir(run_dir, 0777)) {
+		if (mkdir(dir, 0777)) {
 			return 0;
 		}
-		if (stat(run_dir, &sb))
+		if (stat(dir, &sb))
 			return 0;
 	}
 	if (!S_ISDIR(sb.st_mode)) {
