@@ -8,7 +8,7 @@ It can also preserve current brightness before applying the operation (allowing 
 
 The program is available in:
 * [Fedora/EPEL](https://apps.fedoraproject.org/packages/brightnessctl)
-* [Arch Linux (AUR)](https://aur.archlinux.org/packages/brightnessctlhttps://dev.gentoo.org/~zmedico/portage/doc/portage.html#config-bashrc-ebuild-phase-hooks)
+* [Arch Linux (AUR)](https://aur.archlinux.org/packages/brightnessctl)
 
 ## Permissions
 
