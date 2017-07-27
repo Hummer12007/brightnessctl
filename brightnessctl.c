@@ -210,6 +210,7 @@ int apply_operation(struct device *dev, unsigned int operation, struct value *va
 				fprintf(stdout, "Updated device '%s':\n", dev->id);
 			return print_device(dev);
 		}
+	/* FALLTHRU */
 	fail:
 	default:
 		return 0;
