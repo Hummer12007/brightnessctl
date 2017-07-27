@@ -245,7 +245,7 @@ int parse_value(struct value *val, char *str) {
 		val->d_type = DELTA;
 		break;
 	case '%':
-		val->v_type = RELATIVE;	
+		val->v_type = RELATIVE;
 		break;
 	}
 	return 0;
@@ -269,7 +269,7 @@ int list_devices(struct device **devs) {
 }
 
 int print_device(struct device *dev) {
-	char *format = p.mach ? "%s,%s,%d,%d%%,%d\n": 
+	char *format = p.mach ? "%s,%s,%d,%d%%,%d\n":
 		"Device '%s' of class '%s':\n\tCurrent brightness: %d (%d%%)\n\tMax brightness: %d\n\n";
 	fprintf(stdout, format,
 		dev->id, dev->class,
