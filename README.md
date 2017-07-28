@@ -38,6 +38,7 @@ Options:
   -h, --help			print this help.
   -d, --device=DEVICE		specify device name.
   -c, --class=CLASS		specify device class.
+  -V, --version			print version and exit.
 
 Operations:
   i, info			get device info.
