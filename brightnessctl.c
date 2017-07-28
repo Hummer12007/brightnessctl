@@ -86,6 +86,7 @@ static const struct option options[] = {
 	{"pretend", no_argument, NULL, 'p'},
 	{"restore", no_argument, NULL, 'r'},
 	{"save", no_argument, NULL, 's'},
+	{"version", no_argument, NULL, 'V'},
 	{NULL,}
 };
 
@@ -100,7 +101,7 @@ int main(int argc, char **argv) {
 	if (strcmp(name.sysname, "Linux"))
 		fail("This program only supports Linux.\n");
 	while (1) {
-		if ((c = getopt_long(argc, argv, "lqpmsrhc:d:", options, NULL)) < 0)
+		if ((c = getopt_long(argc, argv, "lqpmsrhVc:d:", options, NULL)) < 0)
 			break;
 		switch (c) {
 		case 'l':
@@ -129,6 +130,10 @@ int main(int argc, char **argv) {
 			break;
 		case 'd':
 			p.device = strdup(optarg);
+			break;
+		case 'V':
+			printf("%s\n", VERSION);
+			exit(0);
 			break;
 		default:
 			phelp++;
@@ -542,6 +547,7 @@ Options:\n\
   -h, --help\t\t\tprint this help.\n\
   -d, --device=DEVICE\t\tspecify device name.\n\
   -c, --class=CLASS\t\tspecify device class.\n\
+  -V, --version\t\t\tprint version and exit.\n\
 \n\
 Operations:\n\
   g, get\t\t\tget current brightness of the device.\n\
