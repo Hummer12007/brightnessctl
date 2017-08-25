@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 static char *path = "/sys/class";
 static char *classes[] = { "backlight", "leds", NULL };
@@ -292,7 +293,7 @@ int print_device(struct device *dev) {
 
 void apply_value(struct device *d, struct value *val) {
 	long new, mod = val->v_type == ABSOLUTE ?
-			val->val : val->val / 100.0 * d->max_brightness;
+			val->val : ceil(val->val / 100.0 * d->max_brightness);
 	if (val->d_type == DIRECT) {
 		new = mod > d->max_brightness ? d->max_brightness : mod;
 		goto apply;

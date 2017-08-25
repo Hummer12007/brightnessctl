@@ -1,6 +1,6 @@
 VERSION = 0.2
 DESTDIR ?= /usr/local
-CFLAGS += -std=c99 -g -Wall -Wextra -DVERSION=\"${VERSION}\" -D_POSIX_C_SOURCE=200809L
+CFLAGS += -std=c99 -g -Wall -Wextra -DVERSION=\"${VERSION}\" -D_POSIX_C_SOURCE=200809L -lm
 MODE ?= 4711
 
 all: brightnessctl
