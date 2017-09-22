@@ -16,8 +16,8 @@ MODE = ${MODE_${INSTALL_UDEV_RULES}}
 all: brightnessctl
 
 install: brightnessctl ${INSTALL_UDEV_${INSTALL_UDEV_RULES}}
-	install -d ${DESTDIR}${PREFIX}/bin
-	install -m ${MODE} brightnessctl ${DESTDIR}${PREFIX}/bin/
+	install -d ${BINDIR}
+	install -m ${MODE} brightnessctl ${BINDIR}/
 
 install_udev_rules:
 	install -d ${DESTDIR}${UDEVDIR}
