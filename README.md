@@ -10,19 +10,17 @@ The program is available in:
 * [Fedora/EPEL](https://apps.fedoraproject.org/packages/brightnessctl)
 * [Arch Linux (AUR)](https://aur.archlinux.org/packages/brightnessctl)
 
+One can build and install the program using `make install`. Consult the Makefile for relevant build-time options.
+
 ## Permissions
 
-Modifying brightness requires write permissions for device files. This can be accomplished (without using sudo/su/etc.) by either of the following means:
+Modifying brightness requires write permissions for device files. `brightnessctl` accomplishes this (without using `sudo`/`su`/etc.) by either of the following means:
 
-1) installing brightnessctl as a suid binary (done by default)
+1) installing `brightnessctl` as a suid binary (done by default)
 
-2) adding a similar udev rule (assuming your user is in `video` group for backlight and `input` group for leds):
-```
-ACTION=="add", SUBSYSTEM=="backlight", RUN+="/bin/chgrp video /sys/class/backlight/%k/brightness"
-ACTION=="add", SUBSYSTEM=="backlight", RUN+="/bin/chmod g+w /sys/class/backlight/%k/brightness"
-ACTION=="add", SUBSYSTEM=="leds", RUN+="/bin/chgrp input /sys/class/leds/%k/brightness"
-ACTION=="add", SUBSYSTEM=="leds", RUN+="/bin/chmod g+w /sys/class/leds/%k/brightness"
-```
+2) installing relevant udev rules to add permissions to backlight class devices for users in `video` and leds for users in `input`.
+
+The behavior is controlled by the `INSTALL_UDEV_RULES` flag (setting it to `1` installs the udev rules, `0` is the default value).
 
 ## Usage
 ```
