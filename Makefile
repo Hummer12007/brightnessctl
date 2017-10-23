@@ -1,5 +1,6 @@
 VERSION = 0.3
-CFLAGS += -std=c99 -g -Wall -Wextra -DVERSION=\"${VERSION}\" -D_POSIX_C_SOURCE=200809L -lm
+CFLAGS += -std=c99 -g -Wall -Wextra -DVERSION=\"${VERSION}\" -D_POSIX_C_SOURCE=200809L
+LDLIBS = -lm
 
 PREFIX ?= /usr
 BINDIR = ${DESTDIR}${PREFIX}/bin
@@ -22,7 +23,6 @@ install: brightnessctl ${INSTALL_UDEV_${INSTALL_UDEV_RULES}}
 install_udev_rules:
 	install -d ${DESTDIR}${UDEVDIR}
 	install -m 0644 90-brightnessctl.rules ${DESTDIR}${UDEVDIR}
-
 
 clean:
 	rm -f brightnessctl
