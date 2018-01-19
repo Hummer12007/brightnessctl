@@ -34,7 +34,7 @@ Options:
   -s, --save			save previous state in a temporary file.
   -r, --restore			restore previous saved state.
   -h, --help			print this help.
-  -d, --device=DEVICE		specify device name.
+  -d, --device=DEVICE		specify device name (can be a wildcard).
   -c, --class=CLASS		specify device class.
   -V, --version			print version and exit.
 

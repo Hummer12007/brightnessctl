@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
+#include <fnmatch.h>
 #include <limits.h>
 #include <getopt.h>
 #include <stdio.h>
@@ -193,7 +194,7 @@ int main(int argc, char **argv) {
 	}
 	if (p.save)
 		if (save_device_data(dev))
-			fprintf(stderr, "Could not save data for device '%s'.\n", dev_name);
+			fprintf(stderr, "Could not save data for device '%s'.\n", dev->id);
 	if (p.restore) {
 		if (restore_device_data(dev))
 			write_device(dev);
@@ -266,7 +267,7 @@ int parse_value(struct value *val, char *str) {
 struct device *find_device(struct device **devs, char *name) {
 	struct device *dev;
 	while ((dev = *(devs++)))
-		if (!strcmp(dev->id, name))
+		if (!fnmatch(name, dev->id, 0))
 			return dev;
 	return NULL;
 }
@@ -552,7 +553,7 @@ Options:\n\
   -s, --save\t\t\tsave previous state in a temporary file.\n\
   -r, --restore\t\t\trestore previous saved state.\n\
   -h, --help\t\t\tprint this help.\n\
-  -d, --device=DEVICE\t\tspecify device name.\n\
+  -d, --device=DEVICE\t\tspecify device name (can be a wildcard).\n\
   -c, --class=CLASS\t\tspecify device class.\n\
   -V, --version\t\t\tprint version and exit.\n\
 \n\
