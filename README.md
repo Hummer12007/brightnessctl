@@ -9,6 +9,8 @@ It can also preserve current brightness before applying the operation (allowing 
 The program is available in:
 * [Fedora/EPEL](https://apps.fedoraproject.org/packages/brightnessctl)
 * [Arch Linux (AUR)](https://aur.archlinux.org/packages/brightnessctl)
+* [Debian](https://packages.debian.org/testing/source/brightnessctl) - starting with Buster (and derivatives)
+* [Ubuntu](https://packages.ubuntu.com/source/bionic/brightnessctl) - starting with 18.04 (and derivatives)
 
 One can build and install the program using `make install`. Consult the Makefile for relevant build-time options.
 
