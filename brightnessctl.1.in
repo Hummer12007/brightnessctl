@@ -1,0 +1,133 @@
+'\" t
+.\"     Title: brightnessctl
+.\"    Author: Mykyta Holubakha
+.\"  Language: English
+.\"
+.TH "BRIGHTNESSCTL" "1" "VERSION" "brightnessctl" "brightnessctl"
+
+.SH "NAME"
+brightnessctl \- read and control device brightness
+
+
+.SH "SYNOPSIS"
+
+.sp
+\fBbrightnessctl\fP [\(aqOPTION\(aq]... [\(aqOPERATION\(aq]... [\(aqVALUE\(aq]...
+
+
+.SH "OPTIONS"
+
+.sp
+\fB\-h, \-\-help\fP
+.RS 4
+Print this help.
+.RE
+
+.sp
+\fB\-l, \-\-list\fP
+.RS 4
+List devices with available brightness controls.
+.RE
+
+.sp
+\fB\-q, \-\-quiet\fP
+.RS 4
+Suppress output.
+.RE
+
+.sp
+\fB\-p, \-\-pretend\fP
+.RS 4
+Do not perform write operations.
+.RE
+
+.sp
+\fB\-m, \-\-machine\-readable\fP
+.RS 4
+Produce machine\-readable output.
+.RE
+
+.sp
+\fB\-s, \-\-save\fP
+.RS 4
+Save state in a temporary file.
+.RE
+
+.sp
+\fB\-r, \-\-restore\fP
+.RS 4
+Restore previously\-saved state.
+.RE
+
+.sp
+\fB\-d, \-\-device\fP=\fIDEVICE\fP
+.RS 4
+Specify device name (can be a wildcard).
+.RE
+
+.sp
+\fB\-c, \-\-class\fP=\fICLASS\fP
+.RS 4
+Specify device class.
+.RE
+
+.sp
+\fB\-v, \-\-version\fP
+.RS 4
+Print version and exit.
+.RE
+
+
+.SH "OPERATIONS"
+
+.sp
+\fBi, info\fP
+.RS 4
+Get device info.
+.RE
+
+.sp
+\fBg, get\fP
+.RS 4
+Get the current brightness of the device.
+.RE
+
+.sp
+\fBm, max\fP
+.RS 4
+Get the maximum brightness of the device.
+.RE
+
+.sp
+\fBs, set\fP \fIVALUE\fP
+.RS 4
+Set the brightness of the device.
+
+Valid values:
+.IP \[bu] 2
+absolute value: 500
+.IP \[bu]
+relative value: 50%
+.IP \[bu]
+absolute delta: 50-  or +10
+.IP \[bu]
+relative delta: 50%- or +10%
+.RE
+
+
+.SH "RESOURCES"
+.sp
+\fBProject development repository:\fP \c
+https://github.com/Hummer12007/brightnessctl
+
+
+.SH "COPYING"
+.sp
+Copyright \(co 2016\-2018 Mykyta Holubakha.
+
+Free use of this software is granted under the terms of the MIT/Expat License.
+
+
+.SH "AUTHOR(S)"
+.sp
+\fBMykyta Holubakha\fP
