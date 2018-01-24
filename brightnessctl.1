@@ -1,9 +1,4 @@
-'\" t
-.\"     Title: brightnessctl
-.\"    Author: Mykyta Holubakha
-.\"  Language: English
-.\"
-.TH "BRIGHTNESSCTL" "1" "VERSION" "brightnessctl" "brightnessctl"
+.TH "BRIGHTNESSCTL" "1" "24th Jan 2018" "brightnessctl" "brightnessctl"
 
 .SH "NAME"
 brightnessctl \- read and control device brightness
@@ -12,7 +7,7 @@ brightnessctl \- read and control device brightness
 .SH "SYNOPSIS"
 
 .sp
-\fBbrightnessctl\fP [\(aqOPTION\(aq]... [\(aqOPERATION\(aq]... [\(aqVALUE\(aq]...
+\fIbrightnessctl\fR [options] \fI[operation]\fR [value...]
 
 
 .SH "OPTIONS"
@@ -103,33 +98,44 @@ Get the maximum brightness of the device.
 .RS 4
 Set the brightness of the device.
 
-Valid values:
-.IP \[bu] 2
-absolute value: 500
-.IP \[bu]
-relative value: 50%
-.IP \[bu]
-absolute delta: 50-  or +10
-.IP \[bu]
-relative delta: 50%- or +10%
+.SS VALUES
+.P
+You may specify \fIVALUE\fR for the \fBset\fR command in absolute or relative form, and
+as a value or a delta from the current value. For example:
+.P
+\fBbrightnessctl set 500\fR
+.RS "4"
+Sets brightness to 500.
+.P
 .RE
-
-
-.SH "RESOURCES"
-.sp
-\fBProject development repository:\fP \c
+\fBbrightnessctl set 50%\fR
+.RS "4"
+Sets brightness to 50% of the maximum.
+.P
+.RE
+\fBbrightnessctl set 50-\fR
+.RS "4"
+Subtracts 50 from the current brightness.
+.P
+.RE
+\fBbrightnessctl set +10\fR
+.RS "4"
+Adds 10 to the current brightness.
+.P
+.RE
+\fBbrightnessctl set 50%-\fR
+.RS "4"
+Subtracts 50% of the maximum from the current brightness.
+.P
+.RE
+\fBbrightnessctl set +10%\fR
+.RS "4"
+Adds 10% of the maximum to the current brightness.
+.P
+.RE
+.SH AUTHORS
+.P
+Maintained by Mykyta Holubakha, who is assisted by other open source
+contributors. For more information about brightnessctl development, visit:
+.P
 https://github.com/Hummer12007/brightnessctl
-
-
-.SH "COPYING"
-.sp
-Copyright \(co 2016\-2018 Mykyta Holubakha.
-
-Free use of this software is granted under the terms of the MIT/Expat License.
-
-
-.SH "AUTHOR(S)"
-.sp
-\fBMykyta Holubakha\fP
-
-\fBNicolas Braud-Santoni\fP (manpage)

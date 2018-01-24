@@ -17,9 +17,6 @@ MODE = ${MODE_${INSTALL_UDEV_RULES}}
 
 all: brightnessctl brightnessctl.1
 
-brightnessctl.1: brightnessctl.1.in
-	sed 's/VERSION/$(VERSION)/g' $< > $@
-
 install: all ${INSTALL_UDEV_${INSTALL_UDEV_RULES}}
 	install -d ${BINDIR} ${MANDIR}/man1
 	install -m ${MODE} brightnessctl   ${BINDIR}/
