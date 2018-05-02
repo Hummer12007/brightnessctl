@@ -30,22 +30,22 @@ The behavior is controlled by the `INSTALL_UDEV_RULES` flag (setting it to `1` i
 Usage: brightnessctl [options] [operation] [value]
 
 Options:
-  -l, --list			list devices with available brightness controls.
-  -q, --quiet			suppress output.
-  -p, --pretend			do not perform write operations.
-  -m, --machine-readable	produce machine-readable output.
-  -s, --save			save previous state in a temporary file.
-  -r, --restore			restore previous saved state.
-  -h, --help			print this help.
-  -d, --device=DEVICE		specify device name (can be a wildcard).
-  -c, --class=CLASS		specify device class.
-  -V, --version			print version and exit.
+  -l, --list			List devices with available brightness controls.
+  -q, --quiet			Suppress output.
+  -p, --pretend			Do not perform write operations.
+  -m, --machine-readable	Produce machine-readable output.
+  -s, --save			Save previous state in a temporary file.
+  -r, --restore			Restore previous saved state.
+  -h, --help			Print this help.
+  -d, --device=DEVICE		Specify device name (can be a wildcard).
+  -c, --class=CLASS		Specify device class.
+  -V, --version			Print version and exit.
 
 Operations:
-  i, info			get device info.
-  g, get			get current brightness of the device.
-  m, max			get maximum brightness of the device.
-  s, set VALUE			set brightness of the device.
+  i, info			Get device info.
+  g, get			Get current brightness of the device.
+  m, max			Get maximum brightness of the device.
+  s, set VALUE			Set brightness of the device.
 
 Valid values:
   specific value		Example: 500
