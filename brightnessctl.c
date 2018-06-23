@@ -67,11 +67,11 @@ struct params {
 	char *class;
 	char *device;
 	struct value val;
+	long min;
 	unsigned int quiet : 1;
 	unsigned int list : 1;
 	unsigned int pretend : 1;
 	unsigned int mach : 1;
-	unsigned int never : 1;
 	unsigned int operation : 2;
 	unsigned int save : 1;
 	unsigned int restore : 1;
@@ -85,7 +85,7 @@ static const struct option options[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"list", no_argument, NULL, 'l'},
 	{"machine-readable", no_argument, NULL, 'm'},
-	{"never-zero", no_argument, NULL, 'n'},
+	{"min-value", optional_argument, NULL, 'n'},
 	{"quiet", no_argument, NULL, 'q'},
 	{"pretend", no_argument, NULL, 'p'},
 	{"restore", no_argument, NULL, 'r'},
@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 	if (strcmp(name.sysname, "Linux"))
 		fail("This program only supports Linux.\n");
 	while (1) {
-		if ((c = getopt_long(argc, argv, "lqpmnsrhVc:d:", options, NULL)) < 0)
+		if ((c = getopt_long(argc, argv, "lqpmn::srhVc:d:", options, NULL)) < 0)
 			break;
 		switch (c) {
 		case 'l':
@@ -127,7 +127,10 @@ int main(int argc, char **argv) {
 			p.mach = 1;
 			break;
 		case 'n':
-			p.never = 1;
+			if (optarg)
+				p.min = atol(optarg);
+			else
+				p.min = 1;
 			break;
 		case 'h':
 			usage();
@@ -306,10 +309,10 @@ void apply_value(struct device *d, struct value *val) {
 	}
 	mod *= val->sign == PLUS ? 1 : -1;
 	new = d->curr_brightness + mod;
+	if (new < p.min)
+		new = p.min;
 	if (new < 0)
 		new = 0;
-	if (p.never && new == 0)
-		new = 1;
 	if (new > d->max_brightness)
 		new = d->max_brightness;
 apply:
@@ -557,7 +560,7 @@ Options:\n\
   -q, --quiet\t\t\tsuppress output.\n\
   -p, --pretend\t\t\tdo not perform write operations.\n\
   -m, --machine-readable\tproduce machine-readable output.\n\
-  -n, --never-zero\t\tdisallow setting to 0 when using delta values.\n\
+  -n, --min-value\t\tset minimum brightness, defaults to 1.\n\
   -s, --save\t\t\tsave previous state in a temporary file.\n\
   -r, --restore\t\t\trestore previous saved state.\n\
   -h, --help\t\t\tprint this help.\n\
