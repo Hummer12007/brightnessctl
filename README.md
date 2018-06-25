@@ -34,6 +34,7 @@ Options:
   -q, --quiet			suppress output.
   -p, --pretend			do not perform write operations.
   -m, --machine-readable	produce machine-readable output.
+  -n, --min-value		set minimum brightness, defaults to 1.
   -s, --save			save previous state in a temporary file.
   -r, --restore			restore previous saved state.
   -h, --help			print this help.
