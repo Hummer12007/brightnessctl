@@ -19,9 +19,9 @@ One can build and install the program using `make install`. Consult the Makefile
 
 Modifying brightness requires write permissions for device files. `brightnessctl` accomplishes this (without using `sudo`/`su`/etc.) by either of the following means:
 
-1) installing `brightnessctl` as a suid binary (done by default)
+1) installing relevant udev rules to add permissions to backlight class devices for users in `video` and leds for users in `input`. (done by default)
 
-2) installing relevant udev rules to add permissions to backlight class devices for users in `video` and leds for users in `input`.
+2) installing `brightnessctl` as a suid binary.
 
 The behavior is controlled by the `INSTALL_UDEV_RULES` flag (setting it to `1` installs the udev rules, `0` is the default value).
 
