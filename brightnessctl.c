@@ -9,6 +9,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -30,17 +31,17 @@ static char *device_path(struct device *);
 static char *class_path(char *);
 static void apply_value(struct device *, struct value *);
 static int apply_operation(struct device *, unsigned int, struct value *);
-static int parse_value(struct value *, char *);
-static int write_device(struct device *);
-static int read_device(struct device *, char *, char *);
+static bool parse_value(struct value *, char *);
+static bool write_device(struct device *);
+static bool read_device(struct device *, char *, char *);
 static int read_class(struct device **, char *);
 static int read_devices(struct device **);
-static int print_device(struct device *);
-static int list_devices(struct device **);
+static void print_device(struct device *);
+static void list_devices(struct device **);
 static struct device *find_device(struct device **, char *);
-static int save_device_data(struct device *);
-static int restore_device_data(struct device *);
-static int ensure_dir(char *);
+static bool save_device_data(struct device *);
+static bool restore_device_data(struct device *);
+static bool ensure_dir(char *);
 #define ensure_run_dir() ensure_dir(run_dir)
 
 struct device {
@@ -164,7 +165,8 @@ int main(int argc, char **argv) {
 	}
 	devs[n] = NULL;
 	if (p.list) {
-		return list_devices(devs);
+		list_devices(devs);
+		return 0;
 	}
 	dev_name = p.device;
 	if (!dev_name)
@@ -186,7 +188,7 @@ int main(int argc, char **argv) {
 	argv++;
 	if (p.operation == SET && argc == 0)
 		fail("You need to provide a value to set.\n");
-	if (p.operation == SET && parse_value(&p.val, argv[0]))
+	if (p.operation == SET && !parse_value(&p.val, argv[0]))
 		fail("Invalid value given");
 	if (!(dev = find_device(devs, dev_name)))
 		fail("Device '%s' not found.\n", dev_name);
@@ -203,7 +205,7 @@ int main(int argc, char **argv) {
 	if ((sys_run_dir = getenv("XDG_RUNTIME_DIR")))
 	    run_dir = dir_child(sys_run_dir, "brightnessctl");
 	if (p.save)
-		if (save_device_data(dev))
+		if (!save_device_data(dev))
 			fprintf(stderr, "Could not save data for device '%s'.\n", dev->id);
 	if (p.restore) {
 		if (restore_device_data(dev))
@@ -215,7 +217,8 @@ int main(int argc, char **argv) {
 int apply_operation(struct device *dev, unsigned int operation, struct value *val) {
 	switch (operation) {
 	case INFO:
-		return print_device(dev);
+		print_device(dev);
+		return 0;
 	case GET:
 		fprintf(stdout, "%u\n", dev->curr_brightness);
 		return 0;
@@ -225,21 +228,22 @@ int apply_operation(struct device *dev, unsigned int operation, struct value *va
 	case SET:
 		apply_value(dev, val);
 		if (!p.pretend)
-			if (write_device(dev))
+			if (!write_device(dev))
 				goto fail;
 		if (!p.quiet) {
 			if (!p.mach)
 				fprintf(stdout, "Updated device '%s':\n", dev->id);
-			return print_device(dev);
+			print_device(dev);
+			return 0;
 		}
 	/* FALLTHRU */
 	fail:
 	default:
-		return 0;
+		return 1;
 	}
 }
 
-int parse_value(struct value *val, char *str) {
+bool parse_value(struct value *val, char *str) {
 	long n;
 	char c;
 	char *buf;
@@ -248,7 +252,7 @@ int parse_value(struct value *val, char *str) {
 	val->d_type = DIRECT;
 	val->sign = PLUS;
 	if (!str || !*str)
-		return -1;
+		return false;
 	if (*str == '+' || *str == '-') {
 		val->sign = *str == '+' ? PLUS : MINUS;
 		val->d_type = DELTA;
@@ -256,7 +260,7 @@ int parse_value(struct value *val, char *str) {
 	}
 	n = strtol(str, &buf, 10);
 	if (errno || buf == str)
-		return -1;
+		return false;
 	val->val = labs(n) % LONG_MAX;
 	while ((c = *(buf++))) switch(c) {
 	case '+':
@@ -271,7 +275,7 @@ int parse_value(struct value *val, char *str) {
 		val->v_type = RELATIVE;
 		break;
 	}
-	return 0;
+	return true;
 }
 
 struct device *find_device(struct device **devs, char *name) {
@@ -282,16 +286,15 @@ struct device *find_device(struct device **devs, char *name) {
 	return NULL;
 }
 
-int list_devices(struct device **devs) {
+void list_devices(struct device **devs) {
 	struct device *dev;
 	if (!p.mach)
 		fprintf(stdout, "Available devices:\n");
 	while ((dev = *(devs++)))
 		print_device(dev);
-	return 0;
 }
 
-int print_device(struct device *dev) {
+void print_device(struct device *dev) {
 	char *format = p.mach ? "%s,%s,%d,%d%%,%d\n":
 		"Device '%s' of class '%s':\n\tCurrent brightness: %d (%d%%)\n\tMax brightness: %d\n\n";
 	fprintf(stdout, format,
@@ -299,7 +302,6 @@ int print_device(struct device *dev) {
 		dev->curr_brightness,
 		(int) (100.0 * dev->curr_brightness / dev-> max_brightness),
 		dev->max_brightness);
-	return 0;
 }
 
 void apply_value(struct device *d, struct value *val) {
@@ -321,7 +323,7 @@ apply:
 	d->curr_brightness = new;
 }
 
-int write_device(struct device *d) {
+bool write_device(struct device *d) {
 	FILE *f;
 	char c[16];
 	size_t s = sprintf(c, "%u", d->curr_brightness);
@@ -341,10 +343,10 @@ close:
 fail:
 	if (errno)
 		perror("Error writing device");
-	return errno;
+	return !errno;
 }
 
-int read_device(struct device *d, char *class, char *id) {
+bool read_device(struct device *d, char *class, char *id) {
 	DIR *dirp;
 	FILE *f;
 	char *dev_path;
@@ -410,8 +412,10 @@ int read_class(struct device **devs, char *class) {
 		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, ".."))
 			continue;
 		dev = malloc(sizeof(struct device));
-		if (read_device(dev, class, ent->d_name))
+		if (!read_device(dev, class, ent->d_name)) {
+			free(dev);
 			continue;
+		}
 		devs[cnt++] = dev;
 	}
 	closedir(dirp);
@@ -427,7 +431,7 @@ int read_devices(struct device **devs) {
 	return cnt;
 }
 
-int save_device_data(struct device *dev) {
+bool save_device_data(struct device *dev) {
 	char c[16];
 	size_t s = sprintf(c, "%u", dev->curr_brightness);
 	char *c_path = dir_child(run_dir, dev->class);
@@ -462,10 +466,10 @@ fail:
 		perror("Error saving device data");
 		error++;
 	}
-	return error;
+	return !error;
 }
 
-int restore_device_data(struct device *dev) {
+bool restore_device_data(struct device *dev) {
 	char buf[16];
 	char *filename = cat_with('/', run_dir, dev->class, dev->id);
 	char *end;
@@ -485,29 +489,29 @@ fail:
 	free(filename);
 	if (errno) {
 		perror("Error restoring device data");
-		return 0;
+		return false;
 	}
-	return 1;
+	return true;
 }
 
 
-int ensure_dir(char *dir) {
+bool ensure_dir(char *dir) {
 	struct stat sb;
 	if (stat(dir, &sb)) {
 		if (errno != ENOENT)
-			return 0;
+			return false;
 		errno = 0;
 		if (mkdir(dir, 0777)) {
-			return 0;
+			return false;
 		}
 		if (stat(dir, &sb))
-			return 0;
+			return false;
 	}
 	if (!S_ISDIR(sb.st_mode)) {
 		errno = ENOTDIR;
-		return 0;
+		return false;
 	}
-	return 1;
+	return true;
 }
 
 char *_cat_with(char c, ...) {
