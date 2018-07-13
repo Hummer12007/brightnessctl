@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
 	struct device *devs[255];
 	struct device *dev;
 	struct utsname name;
-	char *dev_name, *file_path;
+	char *dev_name, *file_path, *sys_run_dir;
 	int n, c, phelp = 0;
 	if (uname(&name))
 		fail("Unable to determine current OS. Exiting!\n");
@@ -200,6 +200,8 @@ int main(int argc, char **argv) {
 		}
 		free(file_path);
 	}
+	if ((sys_run_dir = getenv("XDG_RUNTIME_DIR")))
+	    run_dir = dir_child(sys_run_dir, "brightnessctl");
 	if (p.save)
 		if (save_device_data(dev))
 			fprintf(stderr, "Could not save data for device '%s'.\n", dev->id);
