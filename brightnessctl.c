@@ -22,6 +22,8 @@ static char *run_dir = "/tmp/brightnessctl";
 struct value;
 struct device;
 
+enum operation;
+
 static void fail(char *, ...);
 static void usage(void);
 #define cat_with(...) _cat_with(__VA_ARGS__, NULL)
@@ -30,7 +32,7 @@ static char *dir_child(char *, char*);
 static char *device_path(struct device *);
 static char *class_path(char *);
 static void apply_value(struct device *, struct value *);
-static int apply_operation(struct device *, unsigned int, struct value *);
+static int apply_operation(struct device *, enum operation, struct value *);
 static bool parse_value(struct value *, char *);
 static bool write_device(struct device *);
 static bool read_device(struct device *, char *, char *);
@@ -57,9 +59,9 @@ enum sign { PLUS, MINUS };
 
 struct value {
 	unsigned long val;
-	unsigned int v_type : 1;
-	unsigned int d_type : 1;
-	unsigned int sign : 1;
+	enum value_type v_type;
+	enum delta_type d_type;
+	enum sign sign;
 };
 
 enum operation { INFO, GET, MAX, SET };
@@ -69,13 +71,13 @@ struct params {
 	char *device;
 	struct value val;
 	long min;
-	unsigned int quiet : 1;
-	unsigned int list : 1;
-	unsigned int pretend : 1;
-	unsigned int mach : 1;
-	unsigned int operation : 2;
-	unsigned int save : 1;
-	unsigned int restore : 1;
+	enum operation operation;
+	bool quiet;
+	bool list;
+	bool pretend;
+	bool mach;
+	bool save;
+	bool restore;
 };
 
 static struct params p;
@@ -110,22 +112,22 @@ int main(int argc, char **argv) {
 			break;
 		switch (c) {
 		case 'l':
-			p.list = 1;
+			p.list = true;
 			break;
 		case 'q':
-			p.quiet = 1;
+			p.quiet = true;
 			break;
 		case 'p':
-			p.pretend = 1;
+			p.pretend = true;
 			break;
 		case 's':
-			p.save = 1;
+			p.save = true;
 			break;
 		case 'r':
-			p.restore = 1;
+			p.restore = true;
 			break;
 		case 'm':
-			p.mach = 1;
+			p.mach = true;
 			break;
 		case 'n':
 			if (optarg)
@@ -214,7 +216,7 @@ int main(int argc, char **argv) {
 	return apply_operation(dev, p.operation, &p.val);
 }
 
-int apply_operation(struct device *dev, unsigned int operation, struct value *val) {
+int apply_operation(struct device *dev, enum operation operation, struct value *val) {
 	switch (operation) {
 	case INFO:
 		print_device(dev);
