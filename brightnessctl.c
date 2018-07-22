@@ -414,7 +414,7 @@ int read_class(struct device **devs, char *class) {
 		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, ".."))
 			continue;
 		dev = malloc(sizeof(struct device));
-		if (!read_device(dev, class, ent->d_name)) {
+		if (read_device(dev, class, ent->d_name)) {
 			free(dev);
 			continue;
 		}
