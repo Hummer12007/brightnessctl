@@ -399,7 +399,7 @@ dfail:
 		perror("Error reading device");
 		error++;
 	}
-	return error;
+	return !error;
 }
 
 int read_class(struct device **devs, char *class) {
