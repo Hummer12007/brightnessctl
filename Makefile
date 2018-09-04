@@ -1,4 +1,4 @@
-VERSION = 0.3.1
+VERSION = 0.4
 CFLAGS += -std=c99 -g -Wall -Wextra -DVERSION=\"${VERSION}\" -D_POSIX_C_SOURCE=200809L
 LDLIBS = -lm
 
