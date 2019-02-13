@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
 		fail("Unable to determine current OS. Exiting!\n");
 	if (strcmp(name.sysname, "Linux"))
 		fail("This program only supports Linux.\n");
-    p.exponent = 1;
+	p.exponent = 1;
 	while (1) {
 		if ((c = getopt_long(argc, argv, "lqpmn::e::srhVc:d:", options, NULL)) < 0)
 			break;
@@ -307,12 +307,12 @@ void list_devices(struct device **devs) {
 
 float val_to_percent(long val,struct device *d) {
 	if (val < 0) return 0;
-    return powf(powf(100,p.exponent)*val/d->max_brightness,1.0f/p.exponent);
+	return powf(powf(100,p.exponent)*val/d->max_brightness,1.0f/p.exponent);
 }
 
 unsigned long percent_to_val(float percent,struct device *d) {
-    float r = (powf(percent,p.exponent)*d->max_brightness)*(powf(100,-p.exponent));
-    return r<0?0:(unsigned long)r;
+	float r = (powf(percent,p.exponent)*d->max_brightness)*(powf(100,-p.exponent));
+	return r < 0 ? 0 : (unsigned long)r;
 }
 
 void print_device(struct device *dev) {
@@ -321,28 +321,30 @@ void print_device(struct device *dev) {
 	fprintf(stdout, format,
 		dev->id, dev->class,
 		dev->curr_brightness,
-		(int)(val_to_percent(dev->curr_brightness,dev)),
+		(int) val_to_percent(dev->curr_brightness,dev),
 		dev->max_brightness);
 }
 
 void apply_value(struct device *d, struct value *val) {
 	long new;
 	if (val->d_type == DIRECT) {
-        if(val->v_type == ABSOLUTE)
-            new = val->val > d->max_brightness ? d->max_brightness : val->val;
-        else 
-            new = percent_to_val(val->val,d);
+			if(val->v_type == ABSOLUTE)
+				new = val->val > d->max_brightness ? d->max_brightness : val->val;
+			else 
+				new = percent_to_val(val->val,d);
 	} else {//DELTA
-        if(val->v_type == ABSOLUTE) {
-            new = d->curr_brightness + (val->sign == PLUS ? val->val : -val->val);
-        } else {
-            new = percent_to_val(val_to_percent(d->curr_brightness,d)+((long)(val->sign == PLUS ? val->val : -val->val)),d);
-            if(new == d->curr_brightness) {
-                if(val->sign == PLUS) new+=1;
-                else new-=1;
-            }
-        }
-    }
+		if(val->v_type == ABSOLUTE) {
+			new = d->curr_brightness + (val->sign == PLUS ? val->val : -val->val);
+		} else {
+			new = percent_to_val(val_to_percent(d->curr_brightness,d) + ((long)(val->sign == PLUS ? val->val : -val->val)),d);
+			if(new == d->curr_brightness) {
+				if(val->sign == PLUS) 
+					new += 1;
+				else
+					new -= 1;
+			}
+		}
+	}
 	if (new < p.min)
 		new = p.min;
 	if (new < 0)
@@ -597,8 +599,8 @@ Options:\n\
   -m, --machine-readable\tproduce machine-readable output.\n\
   -n, --min-value\t\tset minimum brightness, defaults to 1.\n\
   -e, --exponent\t\tchange percent value mapping to polynominal.\n\
-        \t\t\t%%=x^k*max*100^-k, k defaults to 4.\n\
-        \t\t\tTry changing the value until the changes \"feel\" equal.\n\
+			\t\t\t%%=x^k*max*100^-k, k defaults to 4.\n\
+			\t\t\tTry changing the value until the changes \"feel\" equal.\n\
   -s, --save\t\t\tsave previous state in a temporary file.\n\
   -r, --restore\t\t\trestore previous saved state.\n\
   -h, --help\t\t\tprint this help.\n\
