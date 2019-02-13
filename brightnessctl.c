@@ -78,6 +78,7 @@ struct params {
 	bool mach;
 	bool save;
 	bool restore;
+	float exponent;
 };
 
 static struct params p;
@@ -89,6 +90,7 @@ static const struct option options[] = {
 	{"list", no_argument, NULL, 'l'},
 	{"machine-readable", no_argument, NULL, 'm'},
 	{"min-value", optional_argument, NULL, 'n'},
+	{"exponent", optional_argument, NULL, 'e'},
 	{"quiet", no_argument, NULL, 'q'},
 	{"pretend", no_argument, NULL, 'p'},
 	{"restore", no_argument, NULL, 'r'},
@@ -107,8 +109,9 @@ int main(int argc, char **argv) {
 		fail("Unable to determine current OS. Exiting!\n");
 	if (strcmp(name.sysname, "Linux"))
 		fail("This program only supports Linux.\n");
+	p.exponent = 1;
 	while (1) {
-		if ((c = getopt_long(argc, argv, "lqpmn::srhVc:d:", options, NULL)) < 0)
+		if ((c = getopt_long(argc, argv, "lqpmn::e::srhVc:d:", options, NULL)) < 0)
 			break;
 		switch (c) {
 		case 'l':
@@ -134,6 +137,12 @@ int main(int argc, char **argv) {
 				p.min = atol(optarg);
 			else
 				p.min = 1;
+			break;
+		case 'e':
+			if (optarg)
+				p.exponent = atof(optarg);
+			else
+				p.exponent = 4;
 			break;
 		case 'h':
 			usage();
@@ -205,7 +214,7 @@ int main(int argc, char **argv) {
 		free(file_path);
 	}
 	if ((sys_run_dir = getenv("XDG_RUNTIME_DIR")))
-	    run_dir = dir_child(sys_run_dir, "brightnessctl");
+		run_dir = dir_child(sys_run_dir, "brightnessctl");
 	if (p.save)
 		if (!save_device_data(dev))
 			fprintf(stderr, "Could not save data for device '%s'.\n", dev->id);
@@ -296,32 +305,52 @@ void list_devices(struct device **devs) {
 		print_device(dev);
 }
 
+float val_to_percent(long val,struct device *d) {
+	if (val < 0) return 0;
+	return powf(powf(100,p.exponent)*val/d->max_brightness,1.0f/p.exponent);
+}
+
+unsigned long percent_to_val(float percent,struct device *d) {
+	float r = (powf(percent,p.exponent)*d->max_brightness)*(powf(100,-p.exponent));
+	return r < 0 ? 0 : (unsigned long)r;
+}
+
 void print_device(struct device *dev) {
 	char *format = p.mach ? "%s,%s,%d,%d%%,%d\n":
 		"Device '%s' of class '%s':\n\tCurrent brightness: %d (%d%%)\n\tMax brightness: %d\n\n";
 	fprintf(stdout, format,
 		dev->id, dev->class,
 		dev->curr_brightness,
-		(int) (100.0 * dev->curr_brightness / dev-> max_brightness),
+		(int) val_to_percent(dev->curr_brightness,dev),
 		dev->max_brightness);
 }
 
 void apply_value(struct device *d, struct value *val) {
-	long new, mod = val->v_type == ABSOLUTE ?
-			val->val : ceil(val->val / 100.0 * d->max_brightness);
+	long new;
 	if (val->d_type == DIRECT) {
-		new = mod > d->max_brightness ? d->max_brightness : mod;
-		goto apply;
+			if(val->v_type == ABSOLUTE)
+				new = val->val > d->max_brightness ? d->max_brightness : val->val;
+			else 
+				new = percent_to_val(val->val,d);
+	} else {//DELTA
+		if(val->v_type == ABSOLUTE) {
+			new = d->curr_brightness + (val->sign == PLUS ? val->val : -val->val);
+		} else {
+			new = percent_to_val(val_to_percent(d->curr_brightness,d) + ((long)(val->sign == PLUS ? val->val : -val->val)),d);
+			if(new == d->curr_brightness) {
+				if(val->sign == PLUS) 
+					new += 1;
+				else
+					new -= 1;
+			}
+		}
 	}
-	mod *= val->sign == PLUS ? 1 : -1;
-	new = d->curr_brightness + mod;
 	if (new < p.min)
 		new = p.min;
 	if (new < 0)
 		new = 0;
 	if (new > d->max_brightness)
 		new = d->max_brightness;
-apply:
 	d->curr_brightness = new;
 }
 
@@ -569,6 +598,9 @@ Options:\n\
   -p, --pretend\t\t\tdo not perform write operations.\n\
   -m, --machine-readable\tproduce machine-readable output.\n\
   -n, --min-value\t\tset minimum brightness, defaults to 1.\n\
+  -e, --exponent\t\tchange percent value mapping to polynominal.\n\
+			\t\t\t%%=x^k*max*100^-k, k defaults to 4.\n\
+			\t\t\tTry changing the value until the changes \"feel\" equal.\n\
   -s, --save\t\t\tsave previous state in a temporary file.\n\
   -r, --restore\t\t\trestore previous saved state.\n\
   -h, --help\t\t\tprint this help.\n\
