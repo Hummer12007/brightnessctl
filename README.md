@@ -12,6 +12,7 @@ The program is available in:
 * [Void Linux](https://github.com/voidlinux/void-packages/blob/master/srcpkgs/brightnessctl/template)
 * [Debian](https://packages.debian.org/testing/source/brightnessctl) - starting with Buster (and derivatives)
 * [Ubuntu](https://packages.ubuntu.com/source/bionic/brightnessctl) - starting with 18.04 (and derivatives)
+* [openSUSE](https://build.opensuse.org/package/show/utilities/brightnessctl) - in OBS `utilities/brightnessctl` devel project
 
 One can build and install the program using `make install`. Consult the Makefile for relevant build-time options.
 
