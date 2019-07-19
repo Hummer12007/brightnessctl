@@ -236,8 +236,8 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 			if (!p.mach)
 				fprintf(stdout, "Updated device '%s':\n", dev->id);
 			print_device(dev);
-			return 0;
 		}
+		return 0;
 	/* FALLTHRU */
 	fail:
 	default:
