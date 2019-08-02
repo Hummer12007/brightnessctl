@@ -24,7 +24,7 @@ Modifying brightness requires write permissions for device files. `brightnessctl
 
 2) installing `brightnessctl` as a suid binary.
 
-The behavior is controlled by the `INSTALL_UDEV_RULES` flag (setting it to `1` installs the udev rules, `0` is the default value).
+The behavior is controlled by the `INSTALL_UDEV_RULES` flag (setting it to `1` installs the udev rules, it is the default value).
 
 ## Usage
 ```
