@@ -8,7 +8,7 @@ It can also preserve current brightness before applying the operation (allowing 
 
 The program is available in:
 * [Arch Linux](https://www.archlinux.org/packages/community/x86_64/brightnessctl/)
-* [Void Linux](https://github.com/voidlinux/void-packages/blob/master/srcpkgs/brightnessctl/template)
+* [Void Linux](https://github.com/void-linux/void-packages/blob/master/srcpkgs/brightnessctl/template)
 * [Debian](https://packages.debian.org/testing/source/brightnessctl) - starting with Buster (and derivatives)
 * [Ubuntu](https://packages.ubuntu.com/source/bionic/brightnessctl) - starting with 18.04 (and derivatives)
 * [openSUSE](https://build.opensuse.org/package/show/utilities/brightnessctl) - available in Tumbleweed, use OBS `utilities/brightnessctl` devel project for Leap < 15.1
