@@ -49,6 +49,16 @@ Set minimum brightness when using delta values, defaults to 1.
 .RE
 
 .sp
+\fB\-e, \-\-exponent\fP=\fIK\fP
+.RS 4
+Changes percentage scaling curve to exponential (linear by default). Default exponent is 4.
+
+Percentage equation: % = \fI[VALUE]\fR^\fI[K]\fR * \fI[MAX]\fR * 100^-\fI[K]\fR.
+
+The exponential curve may make the adjustments perceptually equal.
+.RE
+
+.sp
 \fB\-s, \-\-save\fP
 .RS 4
 Save state in a temporary file.
