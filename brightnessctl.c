@@ -422,9 +422,11 @@ fail:
 bool read_device(struct device *d, char *class, char *id) {
 	DIR *dirp;
 	FILE *f;
-	char *dev_path;
+	char *dev_path = NULL;
+	char *ent_path;
 	int error = 0;
 	struct dirent *ent;
+	bool cur;
 	d->class = strdup(class);
 	d->id = strdup(id);
 	dev_path = device_path(d);
@@ -433,39 +435,31 @@ bool read_device(struct device *d, char *class, char *id) {
 	while ((ent = readdir(dirp))) {
 		if (!strcmp(ent->d_name, ".") && !strcmp(ent->d_name, ".."))
 			continue;
-		if (!strcmp(ent->d_name, "brightness")) {
-			if ((f = fopen(dir_child(dev_path, ent->d_name), "r"))) {
-				clearerr(f);
-				if (fscanf(f, "%u", &d->curr_brightness) == EOF) {
-					fprintf(stderr, "End-of-file reading brightness of device '%s'.", d->id);
-					error++;
-				} else if (ferror(f)) {
-					fprintf(stderr, "Error reading brightness of device '%s': %s.", d->id, strerror(errno));
-					error++;
-				}
-				fclose(f);
-			} else
+		if ((cur = !strcmp(ent->d_name, "brightness")) ||
+				!strcmp(ent->d_name, "max_brightness")) {
+			if (!(f = fopen(ent_path = dir_child(dev_path, ent->d_name), "r")))
 				goto fail;
-		}
-		if (!strcmp(ent->d_name, "max_brightness")) {
-			if ((f = fopen(dir_child(dev_path, ent->d_name), "r"))) {
-				clearerr(f);
-				if (fscanf(f, "%u", &d->max_brightness) == EOF) {
-					fprintf(stderr, "End-of-file reading max brightness of device '%s'.", d->id);
-					error++;
-				} else if (ferror(f)) {
-					fprintf(stderr, "Error reading max brightness of device '%s': %s.", d->id, strerror(errno));
-					error++;
-				}
-				fclose(f);
-			} else
-				goto fail;
+			clearerr(f);
+			if (fscanf(f, "%u", cur ? &d->curr_brightness : &d->max_brightness) == EOF) {
+				fprintf(stderr, "End-of-file reading %s of device '%s'.",
+						cur ? "brightness" : "max brightness", d->id);
+				error++;
+			} else if (ferror(f)) {
+				fprintf(stderr, "Error reading %s of device '%s': %s.",
+						cur ? "brightness" : "max brightness", d->id, strerror(errno));
+				error++;
+			}
+			fclose(f);
+			free(ent_path);
+			ent_path = NULL;
 		}
 	}
 	errno = 0;
 fail:
 	closedir(dirp);
 dfail:
+	free(dev_path);
+	free(ent_path);
 	if (errno) {
 		perror("Error reading device");
 		error++;
@@ -477,8 +471,9 @@ int read_class(struct device **devs, char *class) {
 	DIR *dirp;
 	struct dirent *ent;
 	struct device *dev;
+	char *c_path;
 	int cnt = 0;
-	dirp = opendir(class_path(class));
+	dirp = opendir(c_path = class_path(class));
 	if (!dirp)
 		return 0;
 	while ((ent = readdir(dirp))) {
@@ -492,6 +487,7 @@ int read_class(struct device **devs, char *class) {
 		devs[cnt++] = dev;
 	}
 	closedir(dirp);
+	free(c_path);
 	return cnt;
 }
 
