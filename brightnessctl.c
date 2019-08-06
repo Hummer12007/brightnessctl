@@ -1,12 +1,16 @@
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
 #include <fnmatch.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <getopt.h>
+#include <setjmp.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -48,6 +52,7 @@ static struct device *find_device(struct device **, char *);
 static bool save_device_data(struct device *);
 static bool restore_device_data(struct device *);
 static bool ensure_dir(char *);
+void animate(struct device *d, struct value *val);
 #define ensure_run_dir() ensure_dir(run_dir)
 
 #ifdef ENABLE_SYSTEMD
@@ -66,7 +71,7 @@ enum delta_type { DIRECT, DELTA };
 enum sign { PLUS, MINUS };
 
 struct value {
-	unsigned long val;
+	float val;
 	enum value_type v_type;
 	enum delta_type d_type;
 	enum sign sign;
@@ -87,9 +92,12 @@ struct params {
 	bool save;
 	bool restore;
 	float exponent;
+	float animation;
 };
 
 static struct params p;
+
+static jmp_buf anim_buf;
 
 static const struct option options[] = {
 	{"class", required_argument, NULL, 'c'},
@@ -236,6 +244,8 @@ int main(int argc, char **argv) {
 		if (restore_device_data(dev))
 			write_device(dev);
 	}
+	p.animation = 5;
+	//animate(dev, &p.val);
 	return apply_operation(dev, p.operation, &p.val);
 }
 
@@ -400,12 +410,14 @@ bool do_write_device(struct device *d) {
 	FILE *f;
 	char c[16];
 	size_t s = sprintf(c, "%u", d->curr_brightness);
+	char *d_path = device_path(d);
+	char *b_path = dir_child(d_path, "brightness");
 	errno = 0;
 	if (s <= 0) {
 		errno = EINVAL;
 		goto fail;
 	}
-	if ((f = fopen(dir_child(device_path(d), "brightness"), "w"))) {
+	if ((f = fopen(b_path, "w"))) {
 		if (fwrite(c, 1, s, f) < s)
 			goto close;
 	} else
@@ -414,6 +426,8 @@ bool do_write_device(struct device *d) {
 close:
 	fclose(f);
 fail:
+	free(d_path);
+	free(b_path);
 	if (errno)
 		perror("Error writing device");
 	return !errno;
@@ -427,8 +441,10 @@ bool read_device(struct device *d, char *class, char *id) {
 	int error = 0;
 	struct dirent *ent;
 	bool cur;
-	d->class = strdup(class);
-	d->id = strdup(id);
+	if (class && id) {
+		d->class = strdup(class);
+		d->id = strdup(id);
+	}
 	dev_path = device_path(d);
 	if (!(dirp = opendir(dev_path)))
 		goto dfail;
@@ -498,6 +514,88 @@ int read_devices(struct device **devs) {
 	while ((class = classes[n++]))
 		cnt += read_class(devs + cnt, class);
 	return cnt;
+}
+
+struct timespec get_target_time() {
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	if (p.animation < 0) {
+		fprintf(stderr, "Animation duration must be non-negative!");
+		exit(-1);
+	}
+	ts.tv_sec += (int) p.animation;
+	ts.tv_nsec += (p.animation - (int) p.animation) * 1e9;
+	if (ts.tv_nsec >= 1e9) {
+		ts.tv_sec++;
+		ts.tv_nsec -= 1e9;
+	}
+	return ts;
+}
+
+uint64_t tousecs(struct timespec ts) {
+	return ts.tv_sec * 1e6 + ts.tv_nsec / 1e3;
+}
+
+float interp(uint64_t src_from, uint64_t src_to, uint64_t dst_from, uint64_t dst_to, uint64_t src_t) {
+	uint64_t l = src_from > src_to ? src_to : src_from;
+	uint64_t r = src_from > src_to ? src_from : src_to;
+	float t = 1. * (src_t - l) / (r - l);
+	if (src_from > src_to)
+		t = 1 - t;
+	if (dst_from > dst_to)
+		t = 1 - t;
+	l = dst_from > dst_to ? dst_to : dst_from;
+	r = dst_from > dst_to ? dst_from : dst_to;
+	fprintf(stderr, "%lu %lu %lu %f\n", src_from, src_to, src_t, t);
+	fprintf(stderr, "%lu %lu %f %f\n", dst_from, dst_to, t, l + t * (r - l));
+	fprintf(stderr, "======\n");
+	return l + t * (r - l);
+}
+
+void anim_reload_target(int sig) {
+	(void) sig;
+	longjmp(anim_buf, 0);
+}
+
+void anim_sigsetup() {
+	struct sigaction sn;
+	sigemptyset(&sn.sa_mask);
+	sn.sa_flags = 0;
+	sn.sa_handler = anim_reload_target;
+	sigaction(SIGHUP, &sn, NULL);
+
+}
+
+void animate(struct device *d, struct value *val) {
+	struct timespec target, ts;
+	long tl, tr, ct, delta, oldval;
+	struct value init, cur;
+	setjmp(anim_buf);
+	read_device(d, NULL, NULL);
+	memcpy(&init, val, sizeof(struct value));
+	init.val = val->d_type == DELTA ? 0 :
+		   (val->v_type == ABSOLUTE ? d->curr_brightness :
+			    val_to_percent(d->curr_brightness, d));
+	memcpy(&cur, &init, sizeof(struct value));
+	oldval = d->curr_brightness;
+	target = get_target_time();
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	ct = tl = tousecs(ts), tr = tousecs(target);
+	while ((delta = tr - ct) > 0) {
+		cur.val = interp(tl, tr, init.val, val->val, ct);
+		fprintf(stderr, "%f %ld\n", cur.val, percent_to_val(cur.val, d));
+		apply_value(d, &cur);
+		if (oldval != d->curr_brightness)
+			write_device(d);
+		oldval = d->curr_brightness;
+		target.tv_sec = 0;
+		target.tv_nsec = (delta > 10000 ? 10000 : delta) * 1000;
+		nanosleep(&target, NULL);
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+		ct = tousecs(ts);
+	}
+	apply_value(d, val);
+	write_device(d);
 }
 
 bool save_device_data(struct device *dev) {
