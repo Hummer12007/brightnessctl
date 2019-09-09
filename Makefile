@@ -11,6 +11,12 @@ INSTALL_UDEV_RULES = 1
 INSTALL_UDEV_1 = install_udev_rules
 UDEVDIR ?= /lib/udev/rules.d
 
+ifdef ENABLE_SYSTEMD
+	CFLAGS += ${shell pkg-config --cflags libsystemd}
+	LDLIBS += ${shell pkg-config --libs libsystemd}
+	CPPFLAGS += -DENABLE_SYSTEMD
+endif
+
 MODE_0 = 4711
 MODE_1 = 0755
 MODE = ${MODE_${INSTALL_UDEV_RULES}}
