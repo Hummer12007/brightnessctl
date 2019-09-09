@@ -14,6 +14,10 @@
 #include <string.h>
 #include <math.h>
 
+#ifdef ENABLE_SYSTEMD
+# include <systemd/sd-bus.h>
+#endif
+
 static char *path = "/sys/class";
 static char *classes[] = { "backlight", "leds", NULL };
 
@@ -103,7 +107,12 @@ int main(int argc, char **argv) {
 	struct device *devs[255];
 	struct device *dev;
 	struct utsname name;
-	char *dev_name, *file_path, *sys_run_dir;
+	char *dev_name, *sys_run_dir;
+
+#ifndef ENABLE_SYSTEMD
+	char *file_path;
+#endif
+
 	int n, c, phelp = 0;
 	if (uname(&name))
 		fail("Unable to determine current OS. Exiting!\n");
@@ -203,6 +212,8 @@ int main(int argc, char **argv) {
 		fail("Invalid value given");
 	if (!(dev = find_device(devs, dev_name)))
 		fail("Device '%s' not found.\n", dev_name);
+
+#ifndef ENABLE_SYSTEMD
 	if ((p.operation == SET || p.restore) && !p.pretend && geteuid()) {
 		errno = 0;
 		file_path = cat_with('/', path, dev->class, dev->id, "brightness");
@@ -213,6 +224,8 @@ int main(int argc, char **argv) {
 		}
 		free(file_path);
 	}
+#endif
+
 	if ((sys_run_dir = getenv("XDG_RUNTIME_DIR")))
 		run_dir = dir_child(sys_run_dir, "brightnessctl");
 	if (p.save)
@@ -351,6 +364,37 @@ apply:
 	d->curr_brightness = new;
 }
 
+#ifdef ENABLE_SYSTEMD
+
+bool write_device(struct device *d) {
+	sd_bus *bus = NULL;
+	int r = sd_bus_default_system(&bus);
+	if (r < 0) {
+		fprintf(stderr, "Can't connect to system bus: %s\n", strerror(-r));
+		return false;
+	}
+
+	r = sd_bus_call_method(bus,
+			       "org.freedesktop.login1",
+			       "/org/freedesktop/login1/session/auto",
+			       "org.freedesktop.login1.Session",
+			       "SetBrightness",
+			       NULL,
+			       NULL,
+			       "ssu",
+			       d->class,
+			       d->id,
+			       d->curr_brightness);
+	if (r < 0)
+		fprintf(stderr, "Failed to set brightness: %s\n", strerror(-r));
+
+	sd_bus_unref(bus);
+
+	return r >= 0;
+}
+
+#else
+
 bool write_device(struct device *d) {
 	FILE *f;
 	char c[16];
@@ -373,6 +417,8 @@ fail:
 		perror("Error writing device");
 	return !errno;
 }
+
+#endif
 
 bool read_device(struct device *d, char *class, char *id) {
 	DIR *dirp;

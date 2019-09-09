@@ -18,13 +18,17 @@ One can build and install the program using `make install`. Consult the Makefile
 
 ## Permissions
 
-Modifying brightness requires write permissions for device files. `brightnessctl` accomplishes this (without using `sudo`/`su`/etc.) by either of the following means:
+Modifying brightness requires write permissions for device files or systemd support. `brightnessctl` accomplishes this (without using `sudo`/`su`/etc.) by either of the following means:
 
 1) installing relevant udev rules to add permissions to backlight class devices for users in `video` and leds for users in `input`. (done by default)
 
 2) installing `brightnessctl` as a suid binary.
 
+3) using the `systemd-logind` API.
+
 The behavior is controlled by the `INSTALL_UDEV_RULES` flag (setting it to `1` installs the udev rules, it is the default value).
+
+The systemd support (since v243) is controlled by the `ENABLE_SYSTEMD` flag (in that case it is recommended to set `INSTALL_UDEV_RULES` to 0).
 
 ## Usage
 ```
