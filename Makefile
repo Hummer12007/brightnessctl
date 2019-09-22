@@ -1,6 +1,6 @@
 VERSION = 0.4
-CFLAGS += -std=c99 -g -Wall -Wextra -DVERSION=\"${VERSION}\" -D_POSIX_C_SOURCE=200809L -fsanitize=address
-LDLIBS = -lm -fsanitize=address
+CFLAGS += -std=c99 -g -Wall -Wextra -DVERSION=\"${VERSION}\" -D_POSIX_C_SOURCE=200809L
+LDLIBS = -lm
 
 PREFIX ?= /usr
 BINDIR = ${DESTDIR}${PREFIX}/bin

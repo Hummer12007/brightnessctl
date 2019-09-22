@@ -1,8 +1,10 @@
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <sys/stat.h>
+#include <signal.h>
 #include <time.h>
 #include <dirent.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
 #include <fnmatch.h>
@@ -38,8 +40,9 @@ static void usage(void);
 static char *_cat_with(char, ...);
 static char *dir_child(char *, char*);
 static char *device_path(struct device *);
+static char *dev_run_path(struct device *, char *);
 static char *class_path(char *);
-static void apply_value(struct device *, struct value *);
+static unsigned int calc_value(struct device *, struct value *);
 static int apply_operation(struct device *, enum operation, struct value *);
 static bool parse_value(struct value *, char *);
 static bool do_write_device(struct device *);
@@ -52,7 +55,14 @@ static struct device *find_device(struct device **, char *);
 static bool save_device_data(struct device *);
 static bool restore_device_data(struct device *);
 static bool ensure_dir(char *);
-void animate(struct device *d, struct value *val);
+static bool ensure_dev_dir(struct device *);
+static double lerp(double, double, double);
+static double unlerp(double, double, double);
+static void anim_reload_target(int sig);
+static void animate(struct device *, struct value *);
+static void anim_worker(struct device *, struct value *);
+static void ctx_dump(struct device *, struct value *);
+static void ctx_load(struct device *, struct value *);
 #define ensure_run_dir() ensure_dir(run_dir)
 
 #ifdef ENABLE_SYSTEMD
@@ -95,6 +105,13 @@ struct params {
 	float animation;
 };
 
+struct ctx {
+	struct value val;
+	long min;
+	float exponent;
+	float animation;
+};
+
 static struct params p;
 
 static jmp_buf anim_buf;
@@ -107,6 +124,7 @@ static const struct option options[] = {
 	{"machine-readable", no_argument, NULL, 'm'},
 	{"min-value", optional_argument, NULL, 'n'},
 	{"exponent", optional_argument, NULL, 'e'},
+	{"animate", optional_argument, NULL, 'a'},
 	{"quiet", no_argument, NULL, 'q'},
 	{"pretend", no_argument, NULL, 'p'},
 	{"restore", no_argument, NULL, 'r'},
@@ -129,7 +147,7 @@ int main(int argc, char **argv) {
 		fail("This program only supports Linux.\n");
 	p.exponent = 1;
 	while (1) {
-		if ((c = getopt_long(argc, argv, "lqpmn::e::srhVc:d:", options, NULL)) < 0)
+		if ((c = getopt_long(argc, argv, "lqpmn::e::a::srhVc:d:", options, NULL)) < 0)
 			break;
 		switch (c) {
 		case 'l':
@@ -161,6 +179,12 @@ int main(int argc, char **argv) {
 				p.exponent = atof(optarg);
 			else
 				p.exponent = 4;
+			break;
+		case 'a':
+			if (optarg)
+				p.animation = atof(optarg);
+			else
+				p.animation = 0.2;
 			break;
 		case 'h':
 			usage();
@@ -244,8 +268,6 @@ int main(int argc, char **argv) {
 		if (restore_device_data(dev))
 			write_device(dev);
 	}
-	p.animation = 5;
-	//animate(dev, &p.val);
 	return apply_operation(dev, p.operation, &p.val);
 }
 
@@ -261,13 +283,23 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 		fprintf(stdout, "%u\n", dev->max_brightness);
 		return 0;
 	case SET:
-		apply_value(dev, val);
-		if (!p.pretend)
-			if (!write_device(dev))
-				goto fail;
+		if (!p.pretend) {
+			if (p.animation) {
+				if (!fork()) {
+					animate(dev, val);
+					return 0;
+				}
+			} else {
+				dev->curr_brightness = calc_value(dev, val);
+				if (!write_device(dev))
+					goto fail;
+			}
+		}
 		if (!p.quiet) {
 			if (!p.mach)
-				fprintf(stdout, "Updated device '%s':\n", dev->id);
+				fprintf(stdout, "%s device '%s':\n",
+						p.animation ? "Updating" : "Updated",
+						dev->id);
 			print_device(dev);
 		}
 		return 0;
@@ -536,55 +568,128 @@ uint64_t tousecs(struct timespec ts) {
 	return ts.tv_sec * 1e6 + ts.tv_nsec / 1e3;
 }
 
-float interp(uint64_t src_from, uint64_t src_to, uint64_t dst_from, uint64_t dst_to, uint64_t src_t) {
-	uint64_t l = src_from > src_to ? src_to : src_from;
-	uint64_t r = src_from > src_to ? src_from : src_to;
-	float t = 1. * (src_t - l) / (r - l);
-	if (src_from > src_to)
-		t = 1 - t;
-	if (dst_from > dst_to)
-		t = 1 - t;
-	l = dst_from > dst_to ? dst_to : dst_from;
-	r = dst_from > dst_to ? dst_from : dst_to;
-	fprintf(stderr, "%lu %lu %lu %f\n", src_from, src_to, src_t, t);
-	fprintf(stderr, "%lu %lu %f %f\n", dst_from, dst_to, t, l + t * (r - l));
-	fprintf(stderr, "======\n");
-	return l + t * (r - l);
+double lerp(double a, double b, double t) {
+        return (1 - t) * a + t * b;
+}
+
+double unlerp(double a, double b, double v) {
+        return (v - a) / (b - a);
 }
 
 void anim_reload_target(int sig) {
 	(void) sig;
-	longjmp(anim_buf, 0);
+	longjmp(anim_buf, 1);
 }
 
-void anim_sigsetup() {
+void ctx_load(struct device *dev, struct value *val) {
+	struct ctx ctx;
+	char *cpath = dev_run_path(dev, "ctx");
+	int fd = open(cpath, O_RDONLY);
+	read(fd, &ctx, sizeof(struct ctx));
+	memcpy(val, &ctx.val, sizeof(struct value));
+	p.min = ctx.min, p.exponent = ctx.exponent, p.animation = ctx.animation;
+	close(fd);
+	free(cpath);
+}
+
+void ctx_dump(struct device *dev, struct value *val) {
+	char *cpath = dev_run_path(dev, "ctx");
+	int fd = open(cpath, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+	struct ctx ctx = {.min = p.min, .exponent = p.exponent, .animation = p.animation};
+	memcpy(&ctx.val, val, sizeof(struct value));
+	write(fd, &ctx, sizeof(struct ctx));
+	close(fd);
+	free(cpath);
+}
+
+void convert_value(struct device *d, unsigned int target, struct value *val) {
+	unsigned int cur;
+	if (val->d_type == DIRECT)
+		return;
+	read_device(d, NULL, NULL);
+	fprintf(stderr, "In: %s %u -> %u\n", d->id, d->curr_brightness, target);
+	fprintf(stderr, "In: %s %f\n", val->v_type == ABSOLUTE ? "A" : "%",
+			val->val);
+	cur = d->curr_brightness;
+	d->curr_brightness = target;
+	val->val = val->v_type == ABSOLUTE ? calc_value(d, val) : val_to_percent(calc_value(d, val), d, false);
+	val->d_type = DIRECT;
+	d->curr_brightness = cur;
+	fprintf(stderr, "Out: %s %f\n", val->v_type == ABSOLUTE ? "A" : "%",
+			val->val);
+}
+
+void animate(struct device *d, struct value *val) {
+	char *ppath = dev_run_path(d, "pid");
+	int pfd = open(ppath, O_RDONLY);
+	int64_t pid;
+	if (!ensure_dev_dir(d))
+		return; // TODO: handle
+launch:
+	pfd = open(ppath, O_CREAT | O_WRONLY | O_TRUNC | O_EXCL, 0777);
+	if (pfd >= 0) {
+		pid = getpid();
+		write(pfd, &pid, sizeof(int64_t));
+		close(pfd);
+		anim_worker(d, val);
+		unlink(ppath);
+		goto cleanup;
+	}
+	pfd = open(ppath, O_RDONLY);
+	read(pfd, &pid, sizeof(int64_t));
+	close(pfd);
+	ctx_dump(d, val);
+	errno = 0;
+	if (kill(pid, SIGHUP)) {
+		if (errno == ESRCH) {
+			unlink(ppath);
+			goto launch;
+		} else {
+			// EPERM, :(
+		}
+	}
+cleanup:
+	free(ppath);
+	return;
+}
+
+void anim_worker(struct device *d, struct value *val) {
+	struct timespec target, ts;
+	long tl, tr, ct, delta, oldval;
+	struct value init, cur, new;
 	struct sigaction sn;
+	//char *tpath = dev_run_path(d, "target");
+	//int tfd;
+	unsigned int target_val;
+
 	sigemptyset(&sn.sa_mask);
 	sn.sa_flags = 0;
 	sn.sa_handler = anim_reload_target;
 	sigaction(SIGHUP, &sn, NULL);
 
-}
+	if (setjmp(anim_buf)) {
+		ctx_load(d, &new);
+		convert_value(d, target_val, &new);
+		memcpy(val, &new, sizeof(struct value));
+	} else {
+		convert_value(d, d->curr_brightness, val);
+	}
 
-void animate(struct device *d, struct value *val) {
-	struct timespec target, ts;
-	long tl, tr, ct, delta, oldval;
-	struct value init, cur;
-	setjmp(anim_buf);
-	read_device(d, NULL, NULL);
+	target_val = calc_value(d, val);
+
 	memcpy(&init, val, sizeof(struct value));
 	init.val = val->d_type == DELTA ? 0 :
 		   (val->v_type == ABSOLUTE ? d->curr_brightness :
-			    val_to_percent(d->curr_brightness, d));
+			    val_to_percent(d->curr_brightness, d, false));
 	memcpy(&cur, &init, sizeof(struct value));
 	oldval = d->curr_brightness;
+
 	target = get_target_time();
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	ct = tl = tousecs(ts), tr = tousecs(target);
 	while ((delta = tr - ct) > 0) {
-		cur.val = interp(tl, tr, init.val, val->val, ct);
-		fprintf(stderr, "%f %ld\n", cur.val, percent_to_val(cur.val, d));
-		apply_value(d, &cur);
+		cur.val = lerp(init.val, val->val, unlerp(tl, tr, ct));
+		d->curr_brightness = calc_value(d, &cur);
 		if (oldval != d->curr_brightness)
 			write_device(d);
 		oldval = d->curr_brightness;
@@ -596,6 +701,7 @@ void animate(struct device *d, struct value *val) {
 	}
 	apply_value(d, val);
 	write_device(d);
+	//free(tpath);
 }
 
 bool save_device_data(struct device *dev) {
@@ -716,6 +822,18 @@ char *dir_child(char *parent, char *child) {
 
 char *device_path(struct device *dev) {
 	return cat_with('/', path, dev->class, dev->id);
+}
+
+char *dev_run_path(struct device *dev, char *obj) {
+	char *buf = calloc(1, strlen(obj) + strlen(dev->id) + 3);
+	char *s = "__";
+	char *ret;
+	strcpy(buf, dev->id);
+	strcat(buf, s);
+	strcat(buf, obj);
+	ret = cat_with('/', run_dir, dev->class, buf);
+	free(buf);
+	return ret;
 }
 
 char *class_path(char *class) {
