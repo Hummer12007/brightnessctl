@@ -319,15 +319,15 @@ void list_devices(struct device **devs) {
 		print_device(dev);
 }
 
-float val_to_percent(long val, struct device *d) {
+float val_to_percent(float val, struct device *d, bool rnd) {
 	if (val < 0)
 		return 0;
-	return powf(powf(100, p.exponent) * val / d->max_brightness, 1.0f / p.exponent);
+	float ret = powf(val / d->max_brightness, 1.0f / p.exponent) * 100;
+	return rnd ? roundf(ret) : ret;
 }
 
 unsigned long percent_to_val(float percent, struct device *d) {
-	float r = (powf(percent, p.exponent) * d->max_brightness) * powf(100, -p.exponent);
-	return (unsigned long) r;
+	return roundf(powf(percent / 100, p.exponent) * d->max_brightness);
 }
 
 void print_device(struct device *dev) {
@@ -336,11 +336,11 @@ void print_device(struct device *dev) {
 	fprintf(stdout, format,
 		dev->id, dev->class,
 		dev->curr_brightness,
-		(int) val_to_percent(dev->curr_brightness, dev),
+		(int) val_to_percent(dev->curr_brightness, dev, true),
 		dev->max_brightness);
 }
 
-void apply_value(struct device *d, struct value *val) {
+unsigned int calc_value(struct device *d, struct value *val) {
 	long new = d->curr_brightness;
 	if (val->d_type == DIRECT) {
 		new = val->v_type == ABSOLUTE ? val->val : percent_to_val(val->val, d);
@@ -350,7 +350,7 @@ void apply_value(struct device *d, struct value *val) {
 	if (val->sign == MINUS)
 		mod *= -1;
 	if (val->v_type == RELATIVE) {
-		mod = percent_to_val(val_to_percent(d->curr_brightness, d) + mod, d) - d->curr_brightness;
+		mod = percent_to_val(val_to_percent(d->curr_brightness, d, false) + mod, d) - d->curr_brightness;
 		if (val->val != 0 && mod == 0)
 			mod = val->sign == PLUS ? 1 : -1;
 	}
@@ -362,7 +362,7 @@ apply:
 		new = 0;
 	if (new > d->max_brightness)
 		new = d->max_brightness;
-	d->curr_brightness = new;
+	return new;
 }
 
 #ifdef ENABLE_SYSTEMD
