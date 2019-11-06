@@ -14,6 +14,7 @@ The program is available in:
 * [openSUSE](https://build.opensuse.org/package/show/utilities/brightnessctl) - available in Tumbleweed, use OBS `utilities/brightnessctl` devel project for Leap < 15.1
 * [Fedora/EPEL](https://apps.fedoraproject.org/packages/brightnessctl) (orphaned, deleted since F30, maintainer wanted)
 * [NixOS/nix](https://nixos.org/nixos/packages.html?attr=brightnessctl) - starting with 17.09, please see the [NixOS Wiki page](https://nixos.wiki/wiki/Backlight#brightnessctl) for the "best-practice" configuration file based installation
+* [Gentoo](https://github.com/SabbathHex/nitratesky/tree/master/app-misc/brightnessctl) — contains two ebuilds: one for live version and one for 0.4 release.
 
 One can build and install the program using `make install`. Consult the Makefile for relevant build-time options.
 
