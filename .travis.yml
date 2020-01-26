@@ -1,0 +1,19 @@
+language: c
+
+dist: bionic
+
+compiler:
+  - gcc
+  - clang
+
+env:
+  - ENABLE_SYSTEMD=0
+  - ENABLE_SYSTEMD=1
+
+addons:
+  apt:
+    packages:
+      - libsystemd-dev
+
+script:
+  - make
