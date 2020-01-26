@@ -48,6 +48,7 @@ static struct device *find_device(struct device **, char *);
 static bool save_device_data(struct device *);
 static bool restore_device_data(struct device *);
 static bool ensure_dir(char *);
+static bool ensure_dev_dir(struct device *dev);
 #define ensure_run_dir() ensure_dir(run_dir)
 
 #ifdef ENABLE_SYSTEMD
