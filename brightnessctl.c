@@ -366,6 +366,11 @@ apply:
 	return new;
 }
 
+void apply_value(struct device *d, struct value *val) {
+	int new = calc_value(d, val);
+	d->curr_brightness = new;
+}
+
 #ifdef ENABLE_SYSTEMD
 
 bool logind_set_brightness(struct device *d) {
