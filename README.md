@@ -30,7 +30,7 @@ Modifying brightness requires write permissions for device files or systemd supp
 
 The behavior is controlled by the `INSTALL_UDEV_RULES` flag (setting it to `1` installs the udev rules, it is the default value).
 
-The systemd support (since v243) is controlled by the `ENABLE_SYSTEMD` flag (in that case it is recommended to set `INSTALL_UDEV_RULES` to 0).
+The systemd support (since v243) is controlled by the `ENABLE_SYSTEMD` flag (udev rules will not be installed by default).
 
 ## Usage
 ```
