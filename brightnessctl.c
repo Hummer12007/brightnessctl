@@ -35,7 +35,7 @@ static char *_cat_with(char, ...);
 static char *dir_child(char *, char*);
 static char *device_path(struct device *);
 static char *class_path(char *);
-static void apply_value(struct device *, struct value *);
+static unsigned int calc_value(struct device *, struct value *);
 static int apply_operation(struct device *, enum operation, struct value *);
 static bool parse_value(struct value *, char *);
 static bool do_write_device(struct device *);
@@ -48,6 +48,7 @@ static struct device *find_device(struct device **, char *);
 static bool save_device_data(struct device *);
 static bool restore_device_data(struct device *);
 static bool ensure_dir(char *);
+static bool ensure_dev_dir(struct device *);
 #define ensure_run_dir() ensure_dir(run_dir)
 
 #ifdef ENABLE_SYSTEMD
@@ -251,7 +252,7 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 		fprintf(stdout, "%u\n", dev->max_brightness);
 		return 0;
 	case SET:
-		apply_value(dev, val);
+		dev->curr_brightness = calc_value(dev, val);
 		if (!p.pretend)
 			if (!write_device(dev))
 				goto fail;
