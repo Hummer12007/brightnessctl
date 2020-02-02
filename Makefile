@@ -20,6 +20,7 @@ ifdef ENABLE_SYSTEMD
 	LDLIBS += ${shell pkg-config --libs libsystemd}
 	CPPFLAGS += -DENABLE_SYSTEMD
 	MODE = 0755
+	INSTALL_UDEV_RULES = 0
 endif
 
 all: brightnessctl brightnessctl.1
