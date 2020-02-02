@@ -50,6 +50,7 @@ static bool save_device_data(struct device *);
 static bool restore_device_data(struct device *);
 static bool ensure_dir(char *);
 #define ensure_run_dir() ensure_dir(run_dir)
+bool ensure_dev_dir(struct device *dev);
 
 #ifdef ENABLE_SYSTEMD
 static bool logind_set_brightness(struct device *);
