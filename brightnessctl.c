@@ -35,7 +35,8 @@ static char *_cat_with(char, ...);
 static char *dir_child(char *, char*);
 static char *device_path(struct device *);
 static char *class_path(char *);
-static void apply_value(struct device *, struct value *);
+static unsigned int calc_value(struct device *d, struct value *val);
+static void apply_value(struct device *, unsigned int);
 static int apply_operation(struct device *, enum operation, struct value *);
 static bool parse_value(struct value *, char *);
 static bool do_write_device(struct device *);
@@ -251,7 +252,7 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 		fprintf(stdout, "%u\n", dev->max_brightness);
 		return 0;
 	case SET:
-		apply_value(dev, val);
+		apply_value(dev, calc_value(dev, val));
 		if (!p.pretend)
 			if (!write_device(dev))
 				goto fail;
@@ -338,6 +339,10 @@ void print_device(struct device *dev) {
 		dev->curr_brightness,
 		(int) val_to_percent(dev->curr_brightness, dev, true),
 		dev->max_brightness);
+}
+
+void apply_value(struct device *d, unsigned int val) {
+	d->curr_brightness = val;
 }
 
 unsigned int calc_value(struct device *d, struct value *val) {
