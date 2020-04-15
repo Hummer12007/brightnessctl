@@ -79,7 +79,7 @@ struct params {
 	char *class;
 	char *device;
 	struct value val;
-	long min;
+	struct value min;
 	enum operation operation;
 	bool quiet;
 	bool list;
@@ -121,6 +121,7 @@ int main(int argc, char **argv) {
 	if (strcmp(name.sysname, "Linux"))
 		fail("This program only supports Linux.\n");
 	p.exponent = 1;
+	p.min = (struct value){ .val = 0, .v_type = ABSOLUTE, .d_type = DIRECT, .sign = PLUS };
 	while ((c = getopt_long(argc, argv, "lqpmn::e::srhVc:d:", options, NULL)) >= 0) {
 		switch (c) {
 		case 'l':
@@ -142,18 +143,21 @@ int main(int argc, char **argv) {
 			p.mach = true;
 			break;
 		case 'n':
-			if (optarg)
-				p.min = atol(optarg);
-			else if (NULL != argv[optind] && '-' != argv[optind][0])
-				p.min = atol(argv[optind++]);
-			else
-				p.min = 1;
+			if (optarg) {
+				if (!parse_value(&p.min, optarg) || p.min.sign == MINUS)
+					fail("Invalid min-value given");
+			} else if (NULL != argv[optind] && '-' != argv[optind][0]) {
+				if (!parse_value(&p.min, argv[optind++]) || p.min.sign == MINUS)
+					fail("Invalid min-value given");
+			} else {
+				p.min.val = 1;
+			}
 			break;
 		case 'e':
 			if (optarg)
 				p.exponent = atof(optarg);
 			else if (NULL != argv[optind] && atof(argv[optind]) > 0.0)
-				p.exponent = atol(argv[optind++]);
+				p.exponent = atof(argv[optind++]);
 			else
 				p.exponent = 4;
 			break;
@@ -359,8 +363,12 @@ unsigned int calc_value(struct device *d, struct value *val) {
 	}
 	new += mod;
 apply:
-	if (new < p.min)
-		new = p.min;
+	if (p.min.v_type == RELATIVE) {
+		p.min.val = percent_to_val(p.min.val, d);
+		p.min.v_type = ABSOLUTE;
+	}
+	if (new < (long)p.min.val)
+		new = p.min.val;
 	if (new < 0)
 		new = 0;
 	if (new > d->max_brightness)
@@ -641,29 +649,29 @@ void usage() {
 "Usage: brightnessctl [options] [operation] [value]\n\
 \n\
 Options:\n\
-  -l, --list\t\t\tlist devices with available brightness controls.\n\
-  -q, --quiet\t\t\tsuppress output.\n\
-  -p, --pretend\t\t\tdo not perform write operations.\n\
-  -m, --machine-readable\tproduce machine-readable output.\n\
-  -n, --min-value[=MIN]\t\tset minimum brightness (to 1 if MIN is omitted).\n\
-  -e, --exponent[=K]\t\tchanges percentage curve to exponential (to 4 if K is omitted).\n\
-  -s, --save\t\t\tsave previous state in a temporary file.\n\
-  -r, --restore\t\t\trestore previous saved state.\n\
-  -h, --help\t\t\tprint this help.\n\
-  -d, --device=DEVICE\t\tspecify device name (can be a wildcard).\n\
-  -c, --class=CLASS\t\tspecify device class.\n\
-  -V, --version\t\t\tprint version and exit.\n\
+  -l, --list                 \tlist devices with available brightness controls.\n\
+  -q, --quiet                \tsuppress output.\n\
+  -p, --pretend              \tdo not perform write operations.\n\
+  -m, --machine-readable     \tproduce machine-readable output.\n\
+  -n, --min-value[=MIN-VALUE]\tset minimum brightness (to 1 if MIN-VALUE is omitted).\n\
+  -e, --exponent[=K]         \tchanges percentage curve to exponential (to 4 if K is omitted).\n\
+  -s, --save                 \tsave previous state in a temporary file.\n\
+  -r, --restore              \trestore previous saved state.\n\
+  -h, --help                 \tprint this help.\n\
+  -d, --device=DEVICE        \tspecify device name (can be a wildcard).\n\
+  -c, --class=CLASS          \tspecify device class.\n\
+  -V, --version              \tprint version and exit.\n\
 \n\
 Operations:\n\
-  i, info\t\t\tget device info.\n\
-  g, get\t\t\tget current brightness of the device.\n\
-  m, max\t\t\tget maximum brightness of the device.\n\
-  s, set VALUE\t\t\tset brightness of the device.\n\
+  i, info                    \tget device info.\n\
+  g, get                     \tget current brightness of the device.\n\
+  m, max                     \tget maximum brightness of the device.\n\
+  s, set VALUE               \tset brightness of the device.\n\
 \n\
 Valid values:\n\
-  specific value\t\tExample: 500\n\
-  percentage value\t\tExample: 50%%\n\
-  specific delta\t\tExample: 50- or +10\n\
-  percentage delta\t\tExample: 50%%- or +10%%\n\
+  specific value             \tExample: 500\n\
+  percentage value           \tExample: 50%%\n\
+  specific delta             \tExample: 50- or +10\n\
+  percentage delta           \tExample: 50%%- or +10%%\n\
 \n");
 }
