@@ -121,9 +121,7 @@ int main(int argc, char **argv) {
 	if (strcmp(name.sysname, "Linux"))
 		fail("This program only supports Linux.\n");
 	p.exponent = 1;
-	while (1) {
-		if ((c = getopt_long(argc, argv, "lqpmn::e::srhVc:d:", options, NULL)) < 0)
-			break;
+	while ((c = getopt_long(argc, argv, "lqpmn::e::srhVc:d:", options, NULL)) >= 0) {
 		switch (c) {
 		case 'l':
 			p.list = true;
@@ -146,12 +144,16 @@ int main(int argc, char **argv) {
 		case 'n':
 			if (optarg)
 				p.min = atol(optarg);
+			else if (NULL != argv[optind] && '-' != argv[optind][0])
+				p.min = atol(argv[optind++]);
 			else
 				p.min = 1;
 			break;
 		case 'e':
 			if (optarg)
 				p.exponent = atof(optarg);
+			else if (NULL != argv[optind] && atof(argv[optind]) > 0.0)
+				p.exponent = atol(argv[optind++]);
 			else
 				p.exponent = 4;
 			break;
@@ -643,8 +645,8 @@ Options:\n\
   -q, --quiet\t\t\tsuppress output.\n\
   -p, --pretend\t\t\tdo not perform write operations.\n\
   -m, --machine-readable\tproduce machine-readable output.\n\
-  -n, --min-value\t\tset minimum brightness, defaults to 1.\n\
-  -e, --exponent[=K]\t\tchanges percentage curve to exponential.\n\
+  -n, --min-value[=MIN]\t\tset minimum brightness (to 1 if MIN is omitted).\n\
+  -e, --exponent[=K]\t\tchanges percentage curve to exponential (to 4 if K is omitted).\n\
   -s, --save\t\t\tsave previous state in a temporary file.\n\
   -r, --restore\t\t\trestore previous saved state.\n\
   -h, --help\t\t\tprint this help.\n\
@@ -665,4 +667,3 @@ Valid values:\n\
   percentage delta\t\tExample: 50%%- or +10%%\n\
 \n");
 }
-
