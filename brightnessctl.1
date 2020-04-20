@@ -117,7 +117,8 @@ Set the brightness of the device.
 .SS VALUES
 .P
 You may specify \fIVALUE\fR for the \fBset\fR command in absolute or relative form, and
-as a value or a delta from the current value. For example:
+as a value or a delta from the current value, optionally with a number for a gradual
+transition. For example:
 .P
 \fBbrightnessctl set 500\fR
 .RS "4"
@@ -147,6 +148,11 @@ Subtracts 50% of the maximum from the current brightness.
 \fBbrightnessctl set +10%\fR
 .RS "4"
 Adds 10% of the maximum to the current brightness.
+.P
+.RE
+\fBbrightnessctl set 500:100\fR
+.RS "4"
+Sets brightness to 500, using 100 transitional values from the current brightness.
 .P
 .RE
 .SH AUTHORS
