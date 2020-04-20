@@ -680,6 +680,7 @@ Valid values:\n\
   percentage value\t\tExample: 50%%\n\
   specific delta\t\tExample: 50- or +10\n\
   percentage delta\t\tExample: 50%%- or +10%%\n\
+  gradual transition\t\tExample: 50%%-:100 or 500:20\n\
 \n");
 }
 
