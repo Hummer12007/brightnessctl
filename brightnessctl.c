@@ -68,6 +68,7 @@ enum sign { PLUS, MINUS };
 
 struct value {
 	unsigned long val;
+	unsigned long steps;
 	enum value_type v_type;
 	enum delta_type d_type;
 	enum sign sign;
@@ -252,10 +253,15 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 		fprintf(stdout, "%u\n", dev->max_brightness);
 		return 0;
 	case SET:
-		dev->curr_brightness = calc_value(dev, val);
+		;unsigned int target_brightness = calc_value(dev, val);
 		if (!p.pretend)
-			if (!write_device(dev))
-				goto fail;
+			for (unsigned long step = val->steps; step > 0; --step) {
+				dev->curr_brightness += (signed)(target_brightness - dev->curr_brightness) / (signed)step;
+				if (!write_device(dev))
+					goto fail;
+			}
+		else
+			dev->curr_brightness = target_brightness;
 		if (!p.quiet) {
 			if (!p.mach)
 				fprintf(stdout, "Updated device '%s':\n", dev->id);
@@ -274,6 +280,7 @@ bool parse_value(struct value *val, char *str) {
 	char c;
 	char *buf;
 	errno = 0;
+	val->steps = 1;
 	val->v_type = ABSOLUTE;
 	val->d_type = DIRECT;
 	val->sign = PLUS;
@@ -299,6 +306,16 @@ bool parse_value(struct value *val, char *str) {
 		break;
 	case '%':
 		val->v_type = RELATIVE;
+		break;
+	case ':':
+		;char *new_buf;
+		n = strtol(buf, &new_buf, 10);
+		if (errno || buf == new_buf)
+			return false;
+		val->steps = labs(n) % LONG_MAX;
+		if (val->steps < 1)
+			val->steps = 1;
+		buf = new_buf;
 		break;
 	}
 	return true;
