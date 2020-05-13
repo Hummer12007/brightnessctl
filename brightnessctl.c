@@ -67,7 +67,7 @@ enum delta_type { DIRECT, DELTA };
 enum sign { PLUS, MINUS };
 
 struct value {
-	unsigned long val;
+	float val;
 	enum value_type v_type;
 	enum delta_type d_type;
 	enum sign sign;
@@ -276,7 +276,7 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 }
 
 bool parse_value(struct value *val, char *str) {
-	long n;
+	float n;
 	char c;
 	char *buf;
 	errno = 0;
@@ -290,10 +290,10 @@ bool parse_value(struct value *val, char *str) {
 		val->d_type = DELTA;
 		str++;
 	}
-	n = strtol(str, &buf, 10);
+	n = strtof(str, &buf);
 	if (errno || buf == str)
 		return false;
-	val->val = labs(n) % LONG_MAX;
+	val->val = fabsf(n);
 	while ((c = *(buf++))) switch(c) {
 	case '+':
 		val->sign = PLUS;
@@ -326,11 +326,10 @@ void list_devices(struct device **devs) {
 		print_device(dev);
 }
 
-float val_to_percent(float val, struct device *d, bool rnd) {
+float val_to_percent(float val, struct device *d) {
 	if (val < 0)
 		return 0;
-	float ret = powf(val / d->max_brightness, 1.0f / p.exponent) * 100;
-	return rnd ? roundf(ret) : ret;
+	return powf(val / d->max_brightness, 1.0f / p.exponent) * 100;
 }
 
 unsigned long percent_to_val(float percent, struct device *d) {
@@ -338,13 +337,20 @@ unsigned long percent_to_val(float percent, struct device *d) {
 }
 
 void print_device(struct device *dev) {
-	char *format = p.mach ? "%s,%s,%d,%d%%,%d\n" :
-		"Device '%s' of class '%s':\n\tCurrent brightness: %d (%d%%)\n\tMax brightness: %d\n\n";
-	fprintf(stdout, format,
-		dev->id, dev->class,
-		dev->curr_brightness,
-		(int) val_to_percent(dev->curr_brightness, dev, true),
-		dev->max_brightness);
+	float brightness = val_to_percent(dev->curr_brightness, dev);
+	if (p.mach)
+		fprintf(stdout, "%s,%s,%d,%d%%,%d,%f%%\n",
+			dev->id, dev->class,
+			dev->curr_brightness,
+			(int) roundf(brightness),
+			dev->max_brightness,
+			(double) brightness);
+	else
+		fprintf(stdout, "Device '%s' of class '%s':\n\tCurrent brightness: %d (%.02f%%)\n\tMax brightness: %d\n\n",
+			dev->id, dev->class,
+			dev->curr_brightness,
+			(double) brightness,
+			dev->max_brightness);
 }
 
 unsigned int calc_value(struct device *d, struct value *val) {
@@ -357,7 +363,7 @@ unsigned int calc_value(struct device *d, struct value *val) {
 	if (val->sign == MINUS)
 		mod *= -1;
 	if (val->v_type == RELATIVE) {
-		mod = percent_to_val(val_to_percent(d->curr_brightness, d, false) + mod, d) - d->curr_brightness;
+		mod = percent_to_val(val_to_percent(d->curr_brightness, d) + mod, d) - d->curr_brightness;
 		if (val->val != 0 && mod == 0)
 			mod = val->sign == PLUS ? 1 : -1;
 	}
@@ -670,7 +676,7 @@ Operations:\n\
 \n\
 Valid values:\n\
   specific value             \tExample: 500\n\
-  percentage value           \tExample: 50%%\n\
+  percentage value           \tExample: 50.75%%\n\
   specific delta             \tExample: 50- or +10\n\
   percentage delta           \tExample: 50%%- or +10%%\n\
 \n");

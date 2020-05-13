@@ -58,7 +58,7 @@ Operations:
 
 Valid values:
   specific value		Example: 500
-  percentage value		Example: 50%
+  percentage value		Example: 50.5%
   specific delta		Example: 50- or +10
   percentage delta		Example: 50%- or +10%
  ```
