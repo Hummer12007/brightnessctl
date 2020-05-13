@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <sys/stat.h>
@@ -31,7 +32,7 @@ enum operation;
 static void fail(char *, ...);
 static void usage(void);
 #define cat_with(...) _cat_with(__VA_ARGS__, NULL)
-static char *_cat_with(char, ...);
+static char *_cat_with(int, ...);
 static char *dir_child(char *, char*);
 static char *device_path(struct device *);
 static char *class_path(char *);
@@ -601,12 +602,16 @@ bool ensure_dev_dir(struct device *dev) {
 	return ret;
 }
 
-char *_cat_with(char c, ...) {
+char *_cat_with(int c, ...) {
+	// We'd like c to be a char, but passing a char to va_start triggers
+	// undefined behavior. Take it as an int instead, and assert that it can
+	// fit in a char before using it as one.
+	assert(c >= CHAR_MIN && c <= CHAR_MAX);
 	size_t size = 32;
 	size_t length = 0;
 	char *buf = calloc(1, size + 1);
 	char *curr;
-	char split[2] = {c, '\0'};
+	char split[2] = {(char) c, '\0'};
 	va_list va;
 	va_start(va, c);
 	curr = va_arg(va, char *);
