@@ -446,7 +446,7 @@ bool read_device(struct device *d, char *class, char *id) {
 	DIR *dirp;
 	FILE *f;
 	char *dev_path = NULL;
-	char *ent_path;
+	char *ent_path = NULL;
 	int error = 0;
 	struct dirent *ent;
 	bool cur;
