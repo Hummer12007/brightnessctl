@@ -73,7 +73,7 @@ struct value {
 	enum sign sign;
 };
 
-enum operation { INFO, GET, MAX, SET };
+enum operation { INFO, GET, MAX, SET, RESTORE };
 
 struct params {
 	char *class;
@@ -241,7 +241,7 @@ int main(int argc, char **argv) {
 			fprintf(stderr, "Could not save data for device '%s'.\n", dev->id);
 	if (p.restore) {
 		if (restore_device_data(dev))
-			write_device(dev);
+			p.operation = RESTORE;
 	}
 	return apply_operation(dev, p.operation, &p.val);
 }
@@ -259,6 +259,8 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 		return 0;
 	case SET:
 		dev->curr_brightness = calc_value(dev, val);
+	/* FALLTHRU */
+	case RESTORE:
 		if (!p.pretend)
 			if (!write_device(dev))
 				goto fail;
