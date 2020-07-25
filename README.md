@@ -13,7 +13,7 @@ The program is available in:
 * [Debian](https://packages.debian.org/testing/source/brightnessctl) - starting with Buster (and derivatives)
 * [Ubuntu](https://packages.ubuntu.com/source/bionic/brightnessctl) - starting with 18.04 (and derivatives)
 * [openSUSE](https://build.opensuse.org/package/show/utilities/brightnessctl) - available in Tumbleweed, use OBS `utilities/brightnessctl` devel project for Leap < 15.1
-* [Fedora/EPEL](https://apps.fedoraproject.org/packages/brightnessctl) (orphaned, deleted since F30, maintainer wanted)
+* [Fedora](https://src.fedoraproject.org/rpms/brightnessctl) - available in Fedora 31+
 * [NixOS/nix](https://nixos.org/nixos/packages.html?attr=brightnessctl) - starting with 17.09, please see the [NixOS Wiki page](https://nixos.wiki/wiki/Backlight#brightnessctl) for the "best-practice" configuration file based installation
 
 One can build and install the program using `make install`. Consult the Makefile for relevant build-time options.
