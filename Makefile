@@ -10,6 +10,7 @@ INSTALL_UDEV_RULES = 1
 
 INSTALL_UDEV_1 = install_udev_rules
 UDEVDIR ?= /lib/udev/rules.d
+UDEV_HELPER_DIR ?= /lib/udev/
 
 MODE_0 = 4711
 MODE_1 = 0755
@@ -30,11 +31,15 @@ install: all ${INSTALL_UDEV_${INSTALL_UDEV_RULES}}
 	install -m ${MODE} brightnessctl   ${BINDIR}/
 	install -m 0644    brightnessctl.1 ${MANDIR}/man1
 
-install_udev_rules:
+install_udev_rules: install_udev_helper
 	install -d ${DESTDIR}${UDEVDIR}
 	install -m 0644 90-brightnessctl.rules ${DESTDIR}${UDEVDIR}
+
+install_udev_helper:
+	install -d ${DESTDIR}${UDEV_HELPER_DIR}
+	install -m 0755 bright-helper ${DESTDIR}${UDEV_HELPER_DIR}
 
 clean:
 	rm -f brightnessctl
 
-.PHONY: all install clean
+.PHONY: all install install_udev_rules install_udev_helper clean
