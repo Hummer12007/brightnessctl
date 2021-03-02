@@ -7,7 +7,7 @@ It can also preserve current brightness before applying the operation (allowing 
 ## Installation
 
 The program is available in:
-* [Alpine Linux](https://pkgs.alpinelinux.org/package/edge/community/x86_64/brightnessctl) - starting with 3.11 and Edge
+* [Alpine Linux](https://pkgs.alpinelinux.org/packages?name=brightnessctl&branch=edge)
 * [Arch Linux](https://www.archlinux.org/packages/community/x86_64/brightnessctl/)
 * [Void Linux](https://github.com/void-linux/void-packages/blob/master/srcpkgs/brightnessctl/template)
 * [Debian](https://packages.debian.org/testing/source/brightnessctl) - starting with Buster (and derivatives)
