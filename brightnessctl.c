@@ -44,6 +44,7 @@ static int read_class(struct device **, char *);
 static int read_devices(struct device **);
 static void print_device(struct device *);
 static void list_devices(struct device **);
+static float val_to_percent(float, struct device *, bool);
 static struct device *find_device(struct device **, char *);
 static bool save_device_data(struct device *);
 static bool restore_device_data(struct device *);
@@ -73,7 +74,7 @@ struct value {
 	enum sign sign;
 };
 
-enum operation { INFO, GET, MAX, SET, RESTORE };
+enum operation { INFO, GET, PERCENT, MAX, SET, RESTORE };
 
 struct params {
 	char *class;
@@ -208,6 +209,8 @@ int main(int argc, char **argv) {
 		p.operation = SET; break;
 	case 'g':
 		p.operation = GET; break;
+	case 'p':
+		p.operation = PERCENT; break;
 	default:
 	case 'i':
 		p.operation = INFO; break;
@@ -253,6 +256,10 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 		return 0;
 	case GET:
 		fprintf(stdout, "%u\n", dev->curr_brightness);
+		return 0;
+	case PERCENT:
+		fprintf(stdout, "%u\n",
+		        (unsigned) val_to_percent(dev->curr_brightness, dev, true));
 		return 0;
 	case MAX:
 		fprintf(stdout, "%u\n", dev->max_brightness);
@@ -667,6 +674,7 @@ Options:\n\
 Operations:\n\
   i, info                    \tget device info.\n\
   g, get                     \tget current brightness of the device.\n\
+  p, percentage              \tget current brightness of the device as a percentage.\n\
   m, max                     \tget maximum brightness of the device.\n\
   s, set VALUE               \tset brightness of the device.\n\
 \n\
