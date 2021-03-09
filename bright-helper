@@ -1,0 +1,18 @@
+#!/bin/sh -eu
+die() {
+    echo "$@"
+    exit 1
+}
+
+[ $# -eq 3 ] || die "Usage: $0 group mode file"
+GROUP="$1"
+MODE="$2"
+FILE="$3"
+
+[ -e "$FILE" ] || {
+    echo "File '$FILE' does not exist." >&2
+    exit 0
+}
+
+chgrp "$GROUP" "$FILE"
+chmod "$MODE"  "$FILE"
