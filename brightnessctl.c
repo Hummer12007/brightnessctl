@@ -44,6 +44,8 @@ static int read_class(struct device **, char *);
 static int read_devices(struct device **);
 static void print_device(struct device *);
 static void list_devices(struct device **);
+static float val_to_percent(float, struct device *, bool);
+static unsigned long percent_to_val(float, struct device *);
 static struct device *find_device(struct device **, char *);
 static bool save_device_data(struct device *);
 static bool restore_device_data(struct device *);
@@ -85,6 +87,7 @@ struct params {
 	bool list;
 	bool pretend;
 	bool mach;
+	bool percentage;
 	bool save;
 	bool restore;
 	float exponent;
@@ -98,6 +101,7 @@ static const struct option options[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"list", no_argument, NULL, 'l'},
 	{"machine-readable", no_argument, NULL, 'm'},
+	{"percentage", no_argument, NULL, 'P'},
 	{"min-value", optional_argument, NULL, 'n'},
 	{"exponent", optional_argument, NULL, 'e'},
 	{"quiet", no_argument, NULL, 'q'},
@@ -122,7 +126,7 @@ int main(int argc, char **argv) {
 		fail("This program only supports Linux.\n");
 	p.exponent = 1;
 	p.min = (struct value){ .val = 0, .v_type = ABSOLUTE, .d_type = DIRECT, .sign = PLUS };
-	while ((c = getopt_long(argc, argv, "lqpmn::e::srhVc:d:", options, NULL)) >= 0) {
+	while ((c = getopt_long(argc, argv, "lqpmPn::e::srhVc:d:", options, NULL)) >= 0) {
 		switch (c) {
 		case 'l':
 			p.list = true;
@@ -141,6 +145,9 @@ int main(int argc, char **argv) {
 			break;
 		case 'm':
 			p.mach = true;
+			break;
+		case 'P':
+			p.percentage = true;
 			break;
 		case 'n':
 			if (optarg) {
@@ -252,7 +259,10 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 		print_device(dev);
 		return 0;
 	case GET:
-		fprintf(stdout, "%u\n", dev->curr_brightness);
+		if (p.percentage)
+			fprintf(stdout, "%d\n", (int) val_to_percent(dev->curr_brightness, dev, true));
+		else
+			fprintf(stdout, "%u\n", dev->curr_brightness);
 		return 0;
 	case MAX:
 		fprintf(stdout, "%u\n", dev->max_brightness);
@@ -655,6 +665,7 @@ Options:\n\
   -q, --quiet                \tsuppress output.\n\
   -p, --pretend              \tdo not perform write operations.\n\
   -m, --machine-readable     \tproduce machine-readable output.\n\
+  -P, --percentage           \tdisplay value as a percentage in get.\n\
   -n, --min-value[=MIN-VALUE]\tset minimum brightness (to 1 if MIN-VALUE is omitted).\n\
   -e, --exponent[=K]         \tchanges percentage curve to exponential (to 4 if K is omitted).\n\
   -s, --save                 \tsave previous state in a temporary file.\n\
