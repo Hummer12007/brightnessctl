@@ -16,7 +16,7 @@ The program is available in:
 * [Fedora](https://src.fedoraproject.org/rpms/brightnessctl) - available in Fedora 31+
 * [NixOS/nix](https://nixos.org/nixos/packages.html?attr=brightnessctl) - starting with 17.09, please see the [NixOS Wiki page](https://nixos.wiki/wiki/Backlight#brightnessctl) for the "best-practice" configuration file based installation
 
-One can build and install the program using `make install`. Consult the Makefile for relevant build-time options.
+One can build and install the program using `./configure && make install`. Consult the configure help for relevant build-time options.
 
 ## Permissions
 
@@ -28,9 +28,6 @@ Modifying brightness requires write permissions for device files or systemd supp
 
 3) using the `systemd-logind` API.
 
-The behavior is controlled by the `INSTALL_UDEV_RULES` flag (setting it to `1` installs the udev rules, it is the default value).
-
-The systemd support (since v243) is controlled by the `ENABLE_SYSTEMD` flag (udev rules will not be installed by default).
 
 ## Usage
 ```
