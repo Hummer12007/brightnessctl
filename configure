@@ -8,6 +8,7 @@ prefix="/usr"
 pudev="/lib/udev/rules.d"
 udev="auto"
 logind="disabled"
+sdbus="systemd"
 mode="auto"
 
 help() {
@@ -21,6 +22,8 @@ Options: [defaults in brackets after description]
    --install-mode=MODE		brightnessctl installation mode [$mode]
    --udev-dir=PATH		installation path of the udev rules
 				[$pudev]
+   --dbus-provider=PROVIDER	DBus library for logind one of systemd,
+				elogind, basu [$sdbus]
 
 Optional features, enabled with --enable-FEATURE and disabled with
 --disable-FEATURE: [default state in brackets after description]
@@ -52,6 +55,8 @@ for opt do
 	--enable-logind) logind="enabled"
 		;;
 	--disable-logind) logind="disabled"
+		;;
+	--dbus-provider=*) sdbus="$optarg"
 		;;
 	*)
 		echo "Unknown option $opt" >&2
@@ -92,9 +97,21 @@ if [ "$udev" = "enabled" ]; then
 fi
 
 if [ "$logind" = "enabled" ]; then
+	case "$sdbus" in
+	systemd) bus_provider=libsystemd
+		;;
+	elogind) bus_provider=libelogind
+		;;
+	basu) bus_provider=basu
+		;;
+	*)
+		echo "Unexpected dbus provider: $sdbus" >&2
+		exit 1
+		;;
+	esac
 	cat >> config.mk <<EOF
-CFLAGS += $(pkg-config --cflags libsystemd)
-LDLIBS += $(pkg-config --libs libsystemd)
+CFLAGS += $(pkg-config --cflags "$bus_provider")
+LDLIBS += $(pkg-config --libs "$bus_provider")
 CPPFLAGS += -DENABLE_SYSTEMD
 EOF
 fi
@@ -108,5 +125,5 @@ Build configuration:
    UDEV_DIR:	$pudev
 
    udev:	$udev
-   logind:	$logind
+   logind:	$logind [$sdbus]
 EOF
