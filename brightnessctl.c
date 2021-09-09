@@ -14,7 +14,7 @@
 #include <string.h>
 #include <math.h>
 
-#ifdef ENABLE_SYSTEMD
+#ifdef ENABLE_LOGIND
 # include <systemd/sd-bus.h>
 #endif
 
@@ -53,7 +53,7 @@ static bool ensure_dir(char *);
 static bool ensure_dev_dir(struct device *);
 #define ensure_run_dir() ensure_dir(run_dir)
 
-#ifdef ENABLE_SYSTEMD
+#ifdef ENABLE_LOGIND
 static bool logind_set_brightness(struct device *);
 #endif
 
@@ -231,7 +231,7 @@ int main(int argc, char **argv) {
 		errno = 0;
 		file_path = cat_with('/', path, dev->class, dev->id, "brightness");
 		if (access(file_path, W_OK)) {
-#ifdef ENABLE_SYSTEMD
+#ifdef ENABLE_LOGIND
 			write_device = logind_set_brightness;
 #else
 			perror("Can't modify brightness");
@@ -388,7 +388,7 @@ apply:
 	return new;
 }
 
-#ifdef ENABLE_SYSTEMD
+#ifdef ENABLE_LOGIND
 
 bool logind_set_brightness(struct device *d) {
 	sd_bus *bus = NULL;
