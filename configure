@@ -8,7 +8,7 @@ prefix="/usr"
 pudev="/lib/udev/rules.d"
 udev="auto"
 logind="disabled"
-sdbus="systemd"
+sdbus="auto"
 mode="auto"
 
 help() {
@@ -98,6 +98,15 @@ fi
 
 if [ "$logind" = "enabled" ]; then
 	case "$sdbus" in
+	auto)
+		for prov in basu libelogind libsystemd; do
+			pkg-config --exists "$prov" && bus_provider="$prov" sdbus="$prov"
+		done
+		if [ -z "$bus_provider" ]; then
+			echo "Unable to find a workind dbus provider"
+			exit 1
+		fi
+		;;
 	systemd) bus_provider=libsystemd
 		;;
 	elogind) bus_provider=libelogind
