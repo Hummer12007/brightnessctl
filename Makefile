@@ -1,5 +1,9 @@
 include config.mk
 
+config.mk:
+	@echo "You need to run ./configure first"
+	@exit 1
+
 VERSION = 0.5
 CFLAGS += -std=c99 -g -Wall -Wextra -DVERSION=\"${VERSION}\" -D_POSIX_C_SOURCE=200809L
 LDLIBS += -lm
