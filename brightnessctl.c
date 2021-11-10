@@ -203,7 +203,11 @@ int main(int argc, char **argv) {
 	}
 	argc -= optind;
 	argv += optind;
-	if (p.class) {
+	if (p.device && !strcmp(p.device, "*") && !p.class) {
+		fprintf(stderr, "Defaulting to the 'backlight' class, specify `-c '*'` to include leds.\n\n");
+		p.class = strdup("backlight");
+	}
+	if (p.class && strcmp(p.class, "*")) {
 		if (!(n = read_class(devs, p.class)))
 			fail("Failed to read any devices of class '%s'.\n", p.class);
 	} else {
