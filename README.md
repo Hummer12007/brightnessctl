@@ -16,7 +16,7 @@ The program is available in:
 * [Fedora](https://src.fedoraproject.org/rpms/brightnessctl) - available in Fedora 31+
 * [NixOS/nix](https://nixos.org/nixos/packages.html?attr=brightnessctl) - starting with 17.09, please see the [NixOS Wiki page](https://nixos.wiki/wiki/Backlight#brightnessctl) for the "best-practice" configuration file based installation
 
-One can build and install the program using `./configure && make install`. Consult the configure help for relevant build-time options.
+One can build and install the program using `./configure && make install`. Consult `./configure --help` for relevant build-time options.
 
 ## Permissions
 
