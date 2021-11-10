@@ -44,6 +44,7 @@ static char *dir_child(char *, char*);
 static char *device_path(struct device *);
 static char *class_path(char *);
 static unsigned int calc_value(struct device *, struct value *);
+static int process_device(struct device *);
 static int apply_operation(struct device *, enum operation, struct value *);
 static bool parse_value(struct value *, char *);
 static bool do_write_device(struct device *);
@@ -54,7 +55,7 @@ static void print_device(struct device *);
 static void list_devices(struct device **);
 static float val_to_percent(float, struct device *, bool);
 static unsigned long percent_to_val(float, struct device *);
-static struct device *find_device(struct device **, char *);
+static bool find_devices(struct device **, char *);
 static bool save_device_data(struct device *);
 static bool restore_device_data(struct device *);
 static bool ensure_dir(char *);
@@ -70,6 +71,7 @@ struct device {
 	char *id;
 	unsigned int curr_brightness;
 	unsigned int max_brightness;
+	bool matches;
 };
 
 enum value_type { ABSOLUTE, RELATIVE };
@@ -124,9 +126,11 @@ static bool (*write_device)(struct device *) = do_write_device;
 
 int main(int argc, char **argv) {
 	struct device *devs[255];
+	struct device **devp = devs;
 	struct device *dev;
 	struct utsname name;
-	char *dev_name, *file_path, *sys_run_dir;
+	char *dev_name, *sys_run_dir;
+	int ret = 0;
 	int n, c, phelp = 0;
 	if (uname(&name))
 		fail("Unable to determine current OS. Exiting!\n");
@@ -233,8 +237,18 @@ int main(int argc, char **argv) {
 		fail("You need to provide a value to set.\n");
 	if (p.operation == SET && !parse_value(&p.val, argv[0]))
 		fail("Invalid value given");
-	if (!(dev = find_device(devs, dev_name)))
+	if ((sys_run_dir = getenv("XDG_RUNTIME_DIR")))
+		run_dir = dir_child(sys_run_dir, "brightnessctl");
+	if (!(find_devices(devs, dev_name)))
 		fail("Device '%s' not found.\n", dev_name);
+	while ((dev = *(devp++)))
+		if (dev->matches)
+			ret |= process_device(dev);
+	return ret;
+}
+
+int process_device(struct device *dev) {
+	char *file_path;
 	if ((p.operation == SET || p.restore) && !p.pretend && geteuid()) {
 		errno = 0;
 		file_path = cat_with('/', path, dev->class, dev->id, "brightness");
@@ -249,8 +263,6 @@ int main(int argc, char **argv) {
 		}
 		free(file_path);
 	}
-	if ((sys_run_dir = getenv("XDG_RUNTIME_DIR")))
-		run_dir = dir_child(sys_run_dir, "brightnessctl");
 	if (p.save)
 		if (!save_device_data(dev))
 			fprintf(stderr, "Could not save data for device '%s'.\n", dev->id);
@@ -330,12 +342,13 @@ bool parse_value(struct value *val, char *str) {
 	return true;
 }
 
-struct device *find_device(struct device **devs, char *name) {
+bool find_devices(struct device **devs, char *name) {
 	struct device *dev;
+	bool found = false;
 	while ((dev = *(devs++)))
 		if (!fnmatch(name, dev->id, 0))
-			return dev;
-	return NULL;
+			found = dev->matches = true;
+	return found;
 }
 
 void list_devices(struct device **devs) {
@@ -510,7 +523,7 @@ int read_class(struct device **devs, char *class) {
 	while ((ent = readdir(dirp))) {
 		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, ".."))
 			continue;
-		dev = malloc(sizeof(struct device));
+		dev = calloc(1, sizeof(struct device));
 		if (!read_device(dev, class, ent->d_name)) {
 			free(dev);
 			continue;
