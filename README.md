@@ -28,6 +28,11 @@ Modifying brightness requires write permissions for device files or systemd supp
 
 3) using the `systemd-logind` API.
 
+## FAQ
+
+#### I'd like to configure the brightness of an external monitor
+
+Use the [ddcci-driver-linux](https://gitlab.com/ddcci-driver-linux/ddcci-driver-linux) kernel module to expose external monitor brightness controls to `brightnessctl`. Available in repositories of [AUR](https://aur.archlinux.org/packages/ddcci-driver-linux-dkms/), [Debian](https://packages.debian.org/stable/ddcci-dkms), [Nix](https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/ddcci/default.nix), [Ubuntu](https://packages.ubuntu.com/bionic/admin/ddcci-dkms), [Void](https://github.com/void-linux/void-packages/tree/master/srcpkgs/ddcci-dkms).
 
 ## Usage
 ```
