@@ -160,10 +160,10 @@ int main(int argc, char **argv) {
 		case 'n':
 			if (optarg) {
 				if (!parse_value(&p.min, optarg) || p.min.sign == MINUS)
-					fail("Invalid min-value given");
+					fail("Invalid min-value given\n");
 			} else if (NULL != argv[optind] && '-' != argv[optind][0]) {
 				if (!parse_value(&p.min, argv[optind++]) || p.min.sign == MINUS)
-					fail("Invalid min-value given");
+					fail("Invalid min-value given\n");
 			} else {
 				p.min.val = 1;
 			}
@@ -241,7 +241,7 @@ int main(int argc, char **argv) {
 	if (p.operation == SET && argc == 0)
 		fail("You need to provide a value to set.\n");
 	if (p.operation == SET && !parse_value(&p.val, argv[0]))
-		fail("Invalid value given");
+		fail("Invalid value given\n");
 	if (!(find_devices(devs, dev_name)))
 		fail("Device '%s' not found.\n", dev_name);
 	while ((dev = *(devp++)))
