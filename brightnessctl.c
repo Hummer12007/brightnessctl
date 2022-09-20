@@ -349,6 +349,14 @@ unsigned long percent_to_val(float percent, struct device *d) {
 	return roundf(powf(percent / 100, p.exponent) * d->max_brightness);
 }
 
+long percent_to_val_signed(float percent, struct device *d) {
+	if (percent > 0) {
+		return percent_to_val(percent, d);
+	} else {
+		return -percent_to_val(-percent, d);
+	}
+}
+
 void print_device(struct device *dev) {
 	char *format = p.mach ? "%s,%s,%d,%d%%,%d\n" :
 		"Device '%s' of class '%s':\n\tCurrent brightness: %d (%d%%)\n\tMax brightness: %d\n\n";
@@ -369,7 +377,7 @@ unsigned int calc_value(struct device *d, struct value *val) {
 	if (val->sign == MINUS)
 		mod *= -1;
 	if (val->v_type == RELATIVE) {
-		mod = percent_to_val(val_to_percent(d->curr_brightness, d, false) + mod, d) - d->curr_brightness;
+		mod = percent_to_val_signed(val_to_percent(d->curr_brightness, d, false) + mod, d) - d->curr_brightness;
 		if (val->val != 0 && mod == 0)
 			mod = val->sign == PLUS ? 1 : -1;
 	}
