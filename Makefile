@@ -1,9 +1,5 @@
 include config.mk
 
-config.mk:
-	@echo "You need to run ./configure first"
-	@exit 1
-
 VERSION = 0.5
 CFLAGS += -std=c99 -g -Wall -Wextra -DVERSION=\"${VERSION}\" -D_POSIX_C_SOURCE=200809L
 LDLIBS += -lm
@@ -14,6 +10,10 @@ MANDIR = ${DESTDIR}${PREFIX}/share/man
 INSTALL_UDEV_1 = install_udev_rules
 
 all: brightnessctl brightnessctl.1
+
+config.mk:
+	@echo "You need to run ./configure first"
+	@exit 1
 
 install: all ${INSTALL_UDEV_${INSTALL_UDEV_RULES}}
 	install -d ${BINDIR} ${MANDIR}/man1
