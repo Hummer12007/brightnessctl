@@ -37,7 +37,7 @@ static char *device_path(struct device *);
 static char *class_path(char *);
 static unsigned int calc_value(struct device *, struct value *);
 static int apply_operation(struct device *, enum operation, struct value *);
-static bool parse_value(struct value *, char *);
+static bool parse_value(struct value *, const char *);
 static bool do_write_device(struct device *);
 static bool read_device(struct device *, char *, char *);
 static int read_class(struct device **, char *);
@@ -152,10 +152,10 @@ int main(int argc, char **argv) {
 		case 'n':
 			if (optarg) {
 				if (!parse_value(&p.min, optarg) || p.min.sign == MINUS)
-					fail("Invalid min-value given");
+					fail("Invalid min-value given\n");
 			} else if (NULL != argv[optind] && '-' != argv[optind][0]) {
 				if (!parse_value(&p.min, argv[optind++]) || p.min.sign == MINUS)
-					fail("Invalid min-value given");
+					fail("Invalid min-value given\n");
 			} else {
 				p.min.val = 1;
 			}
@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
 	if (p.operation == SET && argc == 0)
 		fail("You need to provide a value to set.\n");
 	if (p.operation == SET && !parse_value(&p.val, argv[0]))
-		fail("Invalid value given");
+		fail("Invalid value given\n");
 	if (!(dev = find_device(devs, dev_name)))
 		fail("Device '%s' not found.\n", dev_name);
 	if ((p.operation == SET || p.restore) && !p.pretend && geteuid()) {
@@ -287,7 +287,7 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 	}
 }
 
-bool parse_value(struct value *val, char *str) {
+bool parse_value(struct value *val, const char *str) {
 	long n;
 	char c;
 	char *buf;
@@ -318,6 +318,8 @@ bool parse_value(struct value *val, char *str) {
 	case '%':
 		val->v_type = RELATIVE;
 		break;
+	default:
+		return false;
 	}
 	return true;
 }
