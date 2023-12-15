@@ -341,12 +341,12 @@ void list_devices(struct device **devs) {
 float val_to_percent(float val, struct device *d, bool rnd) {
 	if (val < 0)
 		return 0;
-	float ret = powf(val / d->max_brightness, 1.0f / p.exponent) * 100;
+	float ret = pow(val / d->max_brightness, 1.0f / p.exponent) * 100;
 	return rnd ? roundf(ret) : ret;
 }
 
 unsigned long percent_to_val(float percent, struct device *d) {
-	return roundf(powf(percent / 100, p.exponent) * d->max_brightness);
+	return roundf(pow(percent / 100, p.exponent) * d->max_brightness);
 }
 
 void print_device(struct device *dev) {
