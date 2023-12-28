@@ -132,7 +132,7 @@ int main(int argc, char **argv) {
 		fail("Unable to determine current OS. Exiting!\n");
 	if (strcmp(name.sysname, "Linux"))
 		fail("This program only supports Linux.\n");
-	p.exponent = 1;
+	p.exponent = 4;
 	p.min = (struct value){ .val = 0, .v_type = ABSOLUTE, .d_type = DIRECT, .sign = PLUS };
 	while ((c = getopt_long(argc, argv, "lqpmPn::e::srhVc:d:", options, NULL)) >= 0) {
 		switch (c) {
