@@ -204,7 +204,8 @@ int main(int argc, char **argv) {
 	argc -= optind;
 	argv += optind;
 	if (p.device && !strcmp(p.device, "*") && !p.class) {
-		fprintf(stderr, "Defaulting to the 'backlight' class, specify `-c '*'` to include leds.\n\n");
+		if (!p.quiet)
+			fprintf(stderr, "Defaulting to the 'backlight' class, specify `-c '*'` to include leds.\n\n");
 		p.class = strdup("backlight");
 	}
 	if (p.class && strcmp(p.class, "*")) {
