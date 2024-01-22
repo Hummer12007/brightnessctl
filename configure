@@ -125,7 +125,7 @@ if [ "$logind" = "enabled" ]; then
 	cat >> config.mk <<EOF
 CFLAGS += $(pkg-config --cflags "$bus_provider")
 LDLIBS += $(pkg-config --libs "$bus_provider")
-CPPFLAGS += -DENABLE_LOGIND
+CPPFLAGS += -DENABLE_LOGIND -DHAVE_$(echo "$bus_provider" | tr '[:lower:]' '[:upper:]')
 EOF
 fi
 
