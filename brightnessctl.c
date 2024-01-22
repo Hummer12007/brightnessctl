@@ -14,8 +14,12 @@
 #include <string.h>
 #include <math.h>
 
-#ifdef ENABLE_LOGIND
-# include <systemd/sd-bus.h>
+#ifdef HAVE_SYSTEMD
+#include <systemd/sd-bus.h>
+#elif HAVE_ELOGIND
+#include <elogind/sd-bus.h>
+#elif HAVE_BASU
+#include <basu/sd-bus.h>
 #endif
 
 static char *path = "/sys/class";

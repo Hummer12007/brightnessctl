@@ -122,6 +122,14 @@ if [ "$logind" = "enabled" ]; then
 		exit 1
 		;;
 	esac
+	case "$bus_provider" in
+	libsystemd) CPPFLAGS="$CPPFLAGS -DHAVE_SYSTEMD"
+		;;
+	libelogind) CPPFLAGS="$CPPFLAGS -DHAVE_ELOGIND"
+		;;
+	basu) CPPFLAGS="$CPPFLAGS -DHAVE_BASU"
+		;;
+	esac
 	cat >> config.mk <<EOF
 CFLAGS += $(pkg-config --cflags "$bus_provider")
 LDLIBS += $(pkg-config --libs "$bus_provider")
