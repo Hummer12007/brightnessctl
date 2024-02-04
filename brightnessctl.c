@@ -38,6 +38,7 @@ enum operation;
 
 static void fail(char *, ...);
 static void usage(void);
+static float parse_exponent(const char *);
 #define cat_with(...) _cat_with(__VA_ARGS__, NULL)
 static char *_cat_with(char, ...);
 static char *dir_child(char *, char*);
@@ -174,9 +175,9 @@ int main(int argc, char **argv) {
 			break;
 		case 'e':
 			if (optarg)
-				p.exponent = atof(optarg);
-			else if (NULL != argv[optind] && atof(argv[optind]) > 0.0)
-				p.exponent = atof(argv[optind++]);
+				p.exponent = parse_exponent(optarg);
+			else if (NULL != argv[optind] && parse_exponent(argv[optind]) > 0.0)
+				p.exponent = parse_exponent(argv[optind++]);
 			else
 				p.exponent = 4;
 			break;
@@ -671,6 +672,14 @@ char *device_path(struct device *dev) {
 
 char *class_path(char *class) {
 	return dir_child(path, class);
+}
+
+static float parse_exponent(const char *str) {
+	char *endptr = NULL;
+	double ret;
+	if ((ret = strtod(str, &endptr)) == 0)
+		fail("Invalid exponent provided: %s\n", str);
+	return ret;
 }
 
 void fail(char *err_msg, ...) {
