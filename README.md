@@ -8,13 +8,13 @@ It can also preserve current brightness before applying the operation (allowing 
 
 The program is available in:
 * [Alpine Linux](https://pkgs.alpinelinux.org/packages?name=brightnessctl&branch=edge)
-* [Arch Linux](https://www.archlinux.org/packages/community/x86_64/brightnessctl/)
+* [Arch Linux](https://www.archlinux.org/packages/extra/x86_64/brightnessctl/)
 * [Void Linux](https://github.com/void-linux/void-packages/blob/master/srcpkgs/brightnessctl/template)
 * [Debian](https://packages.debian.org/testing/source/brightnessctl) - starting with Buster (and derivatives)
-* [Ubuntu](https://packages.ubuntu.com/source/bionic/brightnessctl) - starting with 18.04 (and derivatives)
+* [Ubuntu](https://packages.ubuntu.com/search?suite=all&searchon=names&keywords=brightnessctl) - starting with 18.04 (and derivatives)
 * [openSUSE](https://build.opensuse.org/package/show/utilities/brightnessctl) - available in Tumbleweed, use OBS `utilities/brightnessctl` devel project for Leap < 15.1
 * [Fedora](https://src.fedoraproject.org/rpms/brightnessctl) - available in Fedora 31+
-* [NixOS/nix](https://nixos.org/nixos/packages.html?attr=brightnessctl) - starting with 17.09, please see the [NixOS Wiki page](https://nixos.wiki/wiki/Backlight#brightnessctl) for the "best-practice" configuration file based installation
+* [NixOS/nix](https://search.nixos.org/packages?type=packages&query=brightnessctl) - starting with 17.09, please see the [NixOS Wiki page](https://nixos.wiki/wiki/Backlight#brightnessctl) for the "best-practice" configuration file based installation
 
 One can build and install the program using `./configure && make install`. Consult `./configure --help` for relevant build-time options.
 
@@ -32,7 +32,7 @@ Modifying brightness requires write permissions for device files or systemd supp
 
 #### I'd like to configure the brightness of an external monitor
 
-Use the [ddcci-driver-linux](https://gitlab.com/ddcci-driver-linux/ddcci-driver-linux) kernel module to expose external monitor brightness controls to `brightnessctl`. Available in repositories of [AUR](https://aur.archlinux.org/packages/ddcci-driver-linux-dkms/), [Debian](https://packages.debian.org/stable/ddcci-dkms), [Nix](https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/ddcci/default.nix), [Ubuntu](https://packages.ubuntu.com/bionic/admin/ddcci-dkms), [Void](https://github.com/void-linux/void-packages/tree/master/srcpkgs/ddcci-dkms).
+Use the [ddcci-driver-linux](https://gitlab.com/ddcci-driver-linux/ddcci-driver-linux) kernel module to expose external monitor brightness controls to `brightnessctl`. Available in repositories of [AUR](https://aur.archlinux.org/packages/ddcci-driver-linux-dkms/), [Debian](https://packages.debian.org/stable/ddcci-dkms), [Nix](https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/ddcci/default.nix), [Ubuntu](https://packages.ubuntu.com/search?suite=all&searchon=names&keywords=ddcci-dkms), [Void](https://github.com/void-linux/void-packages/tree/master/srcpkgs/ddcci-dkms).
 
 ## Usage
 ```
