@@ -483,7 +483,7 @@ bool read_device(struct device *d, char *class, char *id) {
 	if (!(dirp = opendir(dev_path)))
 		goto dfail;
 	while ((ent = readdir(dirp))) {
-		if (!strcmp(ent->d_name, ".") && !strcmp(ent->d_name, ".."))
+		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, ".."))
 			continue;
 		if ((cur = !strcmp(ent->d_name, "brightness")) ||
 				!strcmp(ent->d_name, "max_brightness")) {
