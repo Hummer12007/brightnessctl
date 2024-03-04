@@ -61,7 +61,6 @@ static bool save_device_data(struct device *);
 static bool restore_device_data(struct device *);
 static bool ensure_dir(char *);
 static bool ensure_dev_dir(struct device *);
-#define ensure_run_dir() ensure_dir(run_dir)
 
 #ifdef ENABLE_LOGIND
 static bool logind_set_brightness(struct device *);
@@ -130,7 +129,7 @@ int main(int argc, char **argv) {
 	struct device **devp = devs;
 	struct device *dev;
 	struct utsname name;
-	char *dev_name, *sys_run_dir;
+	char *dev_name;
 	int ret = 0;
 	int n, c, phelp = 0;
 	if (uname(&name))
@@ -243,8 +242,6 @@ int main(int argc, char **argv) {
 		fail("You need to provide a value to set.\n");
 	if (p.operation == SET && !parse_value(&p.val, argv[0]))
 		fail("Invalid value given");
-	if ((sys_run_dir = getenv("XDG_RUNTIME_DIR")))
-		run_dir = dir_child(sys_run_dir, "brightnessctl");
 	if (!(find_devices(devs, dev_name)))
 		fail("Device '%s' not found.\n", dev_name);
 	while ((dev = *(devp++)))
@@ -627,6 +624,17 @@ bool ensure_dir(char *dir) {
 		return false;
 	}
 	return true;
+}
+
+static bool ensure_run_dir() {
+	static bool set;
+	if (!set) {
+		char *sys_run_dir = getenv("XDG_RUNTIME_DIR");
+		if (sys_run_dir)
+			run_dir = dir_child(sys_run_dir, "brightnessctl");
+		set = true;
+	}
+	return ensure_dir(run_dir);
 }
 
 bool ensure_dev_dir(struct device *dev) {
