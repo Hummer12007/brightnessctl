@@ -50,8 +50,9 @@ static int apply_operation(struct device *, enum operation, struct value *);
 static bool parse_value(struct value *, char *);
 static bool do_write_device(struct device *);
 static bool read_device(struct device *, char *, char *);
-static int read_class(struct device **, char *);
+static int read_class(struct device **, char *, bool);
 static int read_devices(struct device **);
+static bool read_single_device(struct device **);
 static void print_device(struct device *);
 static void list_devices(struct device **);
 static float val_to_percent(float, struct device *, bool);
@@ -204,8 +205,12 @@ int main(int argc, char **argv) {
 		p.class = strdup("backlight");
 	}
 	if (p.class && strcmp(p.class, "*")) {
-		if (!(n = read_class(devs, p.class)))
+		if (!(n = read_class(devs, p.class, true)))
 			fail("Failed to read any devices of class '%s'.\n", p.class);
+	} else if (!p.list && !p.class && !p.device) {
+		if (!read_single_device(devs))
+			fail("Failed to find a suitable device.\n");
+		n = 1;
 	} else {
 		if (!(n = read_devices(devs)))
 			fail("Failed to read any devices.\n");
@@ -509,7 +514,7 @@ dfail:
 	return !error;
 }
 
-int read_class(struct device **devs, char *class) {
+int read_class(struct device **devs, char *class, bool read_all) {
 	DIR *dirp;
 	struct dirent *ent;
 	struct device *dev;
@@ -527,10 +532,21 @@ int read_class(struct device **devs, char *class) {
 			continue;
 		}
 		devs[cnt++] = dev;
+		if (!read_all)
+			break;
 	}
 	closedir(dirp);
 	free(c_path);
 	return cnt;
+}
+
+bool read_single_device(struct device **devs) {
+	size_t n = 0;
+	char *class;
+	while ((class = classes[n++]))
+		if (read_class(devs, class, false))
+			return true;
+	return false;
 }
 
 int read_devices(struct device **devs) {
@@ -538,7 +554,7 @@ int read_devices(struct device **devs) {
 	char *class;
 	int cnt = 0;
 	while ((class = classes[n++]))
-		cnt += read_class(devs + cnt, class);
+		cnt += read_class(devs + cnt, class, true);
 	return cnt;
 }
 
