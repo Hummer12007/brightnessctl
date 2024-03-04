@@ -1,6 +1,6 @@
 # brightnessctl
 
-This program allows you read and control device brightness. Devices, by default, include backlight and LEDs (searched for in corresponding classes). If omitted, the first found device is selected.
+This program allows you read and control device brightness on Linux. Devices, by default, include backlight and LEDs (searched for in corresponding classes). If omitted, the first found device is selected.
 
 It can also preserve current brightness before applying the operation (allowing for usecases like disabling backlight on lid close).
 
