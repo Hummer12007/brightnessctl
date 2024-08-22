@@ -241,7 +241,8 @@ int main(int argc, char **argv) {
 	if (!(find_devices(devs, p.device)))
 		fail("Device '%s' not found.\n", p.device);
 	while ((dev = *(devp++)))
-		ret |= process_device(dev);
+		if (dev->matches)
+			ret |= process_device(dev);
 	return ret;
 }
 
