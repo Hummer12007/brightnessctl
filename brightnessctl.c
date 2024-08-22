@@ -129,7 +129,6 @@ int main(int argc, char **argv) {
 	struct device *devs[255];
 	struct device **devp = devs;
 	struct device *dev;
-	char *dev_name;
 	int ret = 0;
 	int n, c, phelp = 0;
 	p.exponent = 1;
@@ -220,9 +219,6 @@ int main(int argc, char **argv) {
 		list_devices(devs);
 		return 0;
 	}
-	dev_name = p.device;
-	if (!dev_name)
-		dev_name = devs[0]->id;
 	if (argc == 0)
 		p.operation = INFO;
 	else switch (argv[0][0]) {
@@ -242,11 +238,10 @@ int main(int argc, char **argv) {
 		fail("You need to provide a value to set.\n");
 	if (p.operation == SET && !parse_value(&p.val, argv[0]))
 		fail("Invalid value given\n");
-	if (!(find_devices(devs, dev_name)))
-		fail("Device '%s' not found.\n", dev_name);
+	if (!(find_devices(devs, p.device)))
+		fail("Device '%s' not found.\n", p.device);
 	while ((dev = *(devp++)))
-		if (dev->matches)
-			ret |= process_device(dev);
+		ret |= process_device(dev);
 	return ret;
 }
 
@@ -349,7 +344,9 @@ bool find_devices(struct device **devs, char *name) {
 	struct device *dev;
 	bool found = false;
 	while ((dev = *(devs++)))
-		if (!fnmatch(name, dev->id, 0))
+		if (!name)
+			found = dev->matches = true;
+		else if (!fnmatch(name, dev->id, 0))
 			found = dev->matches = true;
 	return found;
 }
