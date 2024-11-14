@@ -34,7 +34,23 @@ Modifying brightness requires write permissions for device files or systemd supp
 
 Use the [ddcci-driver-linux](https://gitlab.com/ddcci-driver-linux/ddcci-driver-linux) kernel module to expose external monitor brightness controls to `brightnessctl`. Available in repositories of [AUR](https://aur.archlinux.org/packages/ddcci-driver-linux-dkms/), [Debian](https://packages.debian.org/stable/ddcci-dkms), [Nix](https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/ddcci/default.nix), [Ubuntu](https://packages.ubuntu.com/search?suite=all&searchon=names&keywords=ddcci-dkms), [Void](https://github.com/void-linux/void-packages/tree/master/srcpkgs/ddcci-dkms).
 
+#### Error: Can't modify brightness: Permission denied
+
+Your user isn't in the `video` group (backlight) and/or the `input` group
+(leds), this is necessary because the udev rules are only applied to users in
+the `video` and `input` groups. 
+
+1. Add your user to the `video` and `input` groups:
+
+```shell
+usermod -aG video $USER
+usermod -aG input $USER
+```
+
+2. logout or reboot
+
 ## Usage
+
 ```
 Usage: brightnessctl [options] [operation] [value]
 
