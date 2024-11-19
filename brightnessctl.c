@@ -26,6 +26,18 @@
 # endif
 #endif
 
+#define min(a, b) ({ \
+	__auto_type _a = (a); \
+	__auto_type _b = (b); \
+	_a < _b ? _a : _b; })
+
+#define max(a, b) ({ \
+	__auto_type _a = (a); \
+	__auto_type _b = (b); \
+	_a > _b ? _a : _b; })
+
+#define clamp(val, lo, hi) min(max(val, lo), hi)
+
 static char *path = "/sys/class";
 static char *classes[] = { "backlight", "leds", NULL };
 
@@ -378,31 +390,26 @@ void print_device(struct device *dev) {
 }
 
 unsigned int calc_value(struct device *d, struct value *val) {
-	long new = d->curr_brightness;
-	if (val->d_type == DIRECT) {
-		new = val->v_type == ABSOLUTE ? val->val : percent_to_val(val->val, d);
-		goto apply;
+	unsigned long new = val->v_type == ABSOLUTE ? d->curr_brightness :
+		val_to_percent(d->curr_brightness, d, false);
+	switch (val->d_type) {
+	case DIRECT:
+		new = val->val;
+		break;
+	case PLUS:
+		new = new + val->val;
+		break;
+	case MINUS:
+		new = new - val->val;
+		break;
 	}
-	long mod = val->val;
-	if (val->d_type == MINUS)
-		mod *= -1;
-	if (val->v_type == RELATIVE) {
-		mod = percent_to_val(val_to_percent(d->curr_brightness, d, false) + mod, d) - d->curr_brightness;
-		if (val->val != 0 && mod == 0)
-			mod = val->d_type == PLUS ? 1 : -1;
-	}
-	new += mod;
-apply:
+	if (val->v_type == RELATIVE)
+		new = percent_to_val(new, d);
 	if (p.min.v_type == RELATIVE) {
 		p.min.val = percent_to_val(p.min.val, d);
 		p.min.v_type = ABSOLUTE;
 	}
-	if (new < (long)p.min.val)
-		new = p.min.val;
-	if (new < 0)
-		new = 0;
-	if (new > d->max_brightness)
-		new = d->max_brightness;
+	new = clamp(new, max(p.min.val, 0UL), d->max_brightness);
 	return new;
 }
 
