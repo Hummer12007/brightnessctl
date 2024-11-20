@@ -266,6 +266,9 @@ int process_device(struct device *dev) {
 		}
 		free(file_path);
 	}
+	char *sys_run_dir = getenv("XDG_RUNTIME_DIR");
+	if (sys_run_dir)
+		run_dir = dir_child(sys_run_dir, "brightnessctl");
 	if (p.save)
 		if (!save_device_data(dev))
 			fprintf(stderr, "Could not save data for device '%s'.\n", dev->id);
@@ -636,13 +639,6 @@ bool ensure_dir(char *dir) {
 }
 
 static bool ensure_run_dir() {
-	static bool set;
-	if (!set) {
-		char *sys_run_dir = getenv("XDG_RUNTIME_DIR");
-		if (sys_run_dir)
-			run_dir = dir_child(sys_run_dir, "brightnessctl");
-		set = true;
-	}
 	return ensure_dir(run_dir);
 }
 
