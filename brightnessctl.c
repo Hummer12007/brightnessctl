@@ -61,7 +61,6 @@ static bool find_devices(struct device **, char *);
 static bool save_device_data(struct device *);
 static bool restore_device_data(struct device *);
 static bool ensure_dir(char *);
-static bool ensure_dev_dir(struct device *);
 
 #ifdef ENABLE_LOGIND
 static bool logind_set_brightness(struct device *);
@@ -562,7 +561,8 @@ int read_devices(struct device **devs) {
 bool save_device_data(struct device *dev) {
 	char c[16];
 	size_t s = sprintf(c, "%u", dev->curr_brightness);
-	char *d_path = cat_with('/', run_dir, dev->class, dev->id);
+	char *c_path = dir_child(run_dir, dev->class);
+	char *d_path = dir_child(c_path, dev->id);
 	FILE *fp;
 	mode_t old = 0;
 	int error = 0;
@@ -572,7 +572,7 @@ bool save_device_data(struct device *dev) {
 		error++;
 		goto fail;
 	}
-	if (!ensure_dev_dir(dev))
+	if (!ensure_dir(c_path))
 		goto fail;
 	old = umask(0);
 	fp = fopen(d_path, "w");
@@ -585,6 +585,7 @@ bool save_device_data(struct device *dev) {
 	}
 	fclose(fp);
 fail:
+	free(c_path);
 	free(d_path);
 	if (errno) {
 		perror("Error saving device data");
@@ -618,7 +619,6 @@ fail:
 	return true;
 }
 
-
 bool ensure_dir(char *dir) {
 	struct stat sb;
 	if (stat(dir, &sb)) {
@@ -636,21 +636,6 @@ bool ensure_dir(char *dir) {
 		return false;
 	}
 	return true;
-}
-
-static bool ensure_run_dir() {
-	return ensure_dir(run_dir);
-}
-
-bool ensure_dev_dir(struct device *dev) {
-	char *cpath;
-	bool ret;
-	if (!ensure_run_dir())
-		return false;
-	cpath = dir_child(run_dir, dev->class);
-	ret = ensure_dir(cpath);
-	free(cpath);
-	return ret;
 }
 
 char *_cat_with(char c, ...) {
