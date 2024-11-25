@@ -563,34 +563,30 @@ bool save_device_data(struct device *dev) {
 	size_t s = sprintf(c, "%u", dev->curr_brightness);
 	char *c_path = dir_child(run_dir, dev->class);
 	char *d_path = dir_child(c_path, dev->id);
-	FILE *fp;
-	mode_t old = 0;
 	int error = 0;
-	errno = 0;
-	if (s <= 0) {
+	if (s > 0) {
+		if (mkdir_parent(c_path)) {
+			mode_t old = umask(0);
+			FILE *fp = fopen(d_path, "w");
+			umask(old);
+			if (fp) {
+				fwrite(c, 1, s, fp);
+				if (ferror(fp)) {
+					error++;
+					fprintf(stderr, "Error writing to '%s'.\n", d_path);
+				}
+				fclose(fp);
+			} else {
+				error++;
+				fprintf(stderr, "Error opening '%s': %s\n", d_path, strerror(errno));
+			}
+		}
+	} else {
+		error++;
 		fprintf(stderr, "Error converting device data.");
-		error++;
-		goto fail;
 	}
-	if (!mkdir_parent(c_path))
-		goto fail;
-	old = umask(0);
-	fp = fopen(d_path, "w");
-	umask(old);
-	if (!fp)
-		goto fail;
-	if (fwrite(c, 1, s, fp) < s) {
-		fprintf(stderr, "Error writing to '%s'.\n", d_path);
-		error++;
-	}
-	fclose(fp);
-fail:
 	free(c_path);
 	free(d_path);
-	if (errno) {
-		perror("Error saving device data");
-		error++;
-	}
 	return !error;
 }
 
