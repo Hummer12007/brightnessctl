@@ -559,60 +559,50 @@ int read_devices(struct device **devs) {
 }
 
 bool save_device_data(struct device *dev) {
-	char c[16];
-	size_t s = sprintf(c, "%u", dev->curr_brightness);
 	char *c_path = dir_child(run_dir, dev->class);
 	char *d_path = dir_child(c_path, dev->id);
-	int error = 0;
-	if (s > 0) {
-		if (mkdir_parent(c_path)) {
-			mode_t old = umask(0);
-			FILE *fp = fopen(d_path, "w");
-			umask(old);
-			if (fp) {
-				fwrite(c, 1, s, fp);
-				if (ferror(fp)) {
-					error++;
-					fprintf(stderr, "Error writing to '%s'.\n", d_path);
-				}
-				fclose(fp);
-			} else {
-				error++;
-				fprintf(stderr, "Error opening '%s': %s\n", d_path, strerror(errno));
+	bool ret = true;
+	if (mkdir_parent(c_path)) {
+		mode_t old = umask(0);
+		FILE *fp = fopen(d_path, "wb");
+		umask(old);
+		if (fp) {
+			fwrite(&dev->curr_brightness, sizeof(dev->curr_brightness), 1, fp);
+			if (ferror(fp)) {
+				ret = false;
+				fprintf(stderr, "Error writing to '%s'.\n", d_path);
 			}
+			fclose(fp);
+		} else {
+			ret = false;
+			fprintf(stderr, "Error opening '%s': %s\n", d_path, strerror(errno));
 		}
-	} else {
-		error++;
-		fprintf(stderr, "Error converting device data.");
 	}
 	free(c_path);
 	free(d_path);
-	return !error;
+	return ret;
 }
 
 bool restore_device_data(struct device *dev) {
-	char buf[16];
 	char *filename = cat_with('/', run_dir, dev->class, dev->id);
-	char *end;
-	FILE *fp;
-	memset(buf, 0, 16);
-	errno = 0;
-	if (!(fp = fopen(filename, "r")))
-		goto fail;
-	if (!fread(buf, 1, 15, fp))
-		goto rfail;
-	dev->curr_brightness = strtol(buf, &end, 10);
-	if (end == buf)
-		errno = EINVAL;
-rfail:
-	fclose(fp);
-fail:
-	free(filename);
-	if (errno) {
+	bool ret = true;
+	FILE *fp = fopen(filename, "rb");
+	if (fp) {
+		unsigned int val;
+		fread(&val, sizeof(val), 1, fp);
+		if (!ferror(fp)) {
+			dev->curr_brightness = val;
+		} else {
+			ret = false;
+			fprintf(stderr, "Error reading file '%s'\n", filename);
+		}
+		fclose(fp);
+	} else {
+		ret = false;
 		perror("Error restoring device data");
-		return false;
 	}
-	return true;
+	free(filename);
+	return ret;
 }
 
 bool mkdir_parent(const char *path) {
