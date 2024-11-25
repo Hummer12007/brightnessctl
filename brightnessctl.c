@@ -60,7 +60,7 @@ static unsigned long percent_to_val(float, struct device *);
 static bool find_devices(struct device **, char *);
 static bool save_device_data(struct device *);
 static bool restore_device_data(struct device *);
-static bool ensure_dir(char *);
+static bool mkdir_parent(const char *);
 
 #ifdef ENABLE_LOGIND
 static bool logind_set_brightness(struct device *);
@@ -572,7 +572,7 @@ bool save_device_data(struct device *dev) {
 		error++;
 		goto fail;
 	}
-	if (!ensure_dir(c_path))
+	if (!mkdir_parent(c_path))
 		goto fail;
 	old = umask(0);
 	fp = fopen(d_path, "w");
@@ -619,23 +619,27 @@ fail:
 	return true;
 }
 
-bool ensure_dir(char *dir) {
-	struct stat sb;
-	if (stat(dir, &sb)) {
-		if (errno != ENOENT)
-			return false;
-		errno = 0;
-		if (mkdir(dir, 0777)) {
-			return false;
-		}
-		if (stat(dir, &sb))
-			return false;
-	}
-	if (!S_ISDIR(sb.st_mode)) {
-		errno = ENOTDIR;
+bool mkdir_parent(const char *path) {
+	if (!path)
 		return false;
+	bool ret = true;
+	size_t size = strlen(path) + 1;
+	char *tmp = calloc(1, size);
+	if (!tmp)
+		return false;
+	for (const char *p = path; (p - path) < (long)size; p++) {
+		if ((*p == '/' || *p == '\0') && (p != path && *(p - 1) != '/')) {
+			memcpy(tmp, path, p - path);
+			tmp[p - path] = 0;
+			if (mkdir(tmp, 0777) && errno != EEXIST) {
+				ret = false;
+				perror(tmp);
+				break;
+			}
+		}
 	}
-	return true;
+	free(tmp);
+	return ret;
 }
 
 char *_cat_with(char c, ...) {
