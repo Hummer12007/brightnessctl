@@ -61,6 +61,7 @@ static bool find_devices(struct device **, char *);
 static bool save_device_data(struct device *);
 static bool restore_device_data(struct device *);
 static bool mkdir_parent(const char *);
+static bool ensure_dir(const char *);
 
 #ifdef ENABLE_LOGIND
 static bool logind_set_brightness(struct device *);
@@ -566,7 +567,7 @@ bool save_device_data(struct device *dev) {
 	char *c_path = dir_child(run_dir, dev->class);
 	char *d_path = dir_child(c_path, dev->id);
 	bool ret = true;
-	if (mkdir_parent(c_path)) {
+	if (ensure_dir(c_path)) {
 		FILE *fp = fopen(d_path, "wb");
 		if (fp) {
 			fwrite(&dev->curr_brightness, sizeof(dev->curr_brightness), 1, fp);
@@ -579,6 +580,8 @@ bool save_device_data(struct device *dev) {
 			ret = false;
 			fprintf(stderr, "Error opening '%s': %s\n", d_path, strerror(errno));
 		}
+	} else {
+		fprintf(stderr, "Failed to access or create '%s': %s\n", path, strerror(errno));
 	}
 	free(c_path);
 	free(d_path);
@@ -628,6 +631,12 @@ bool mkdir_parent(const char *path) {
 	}
 	free(tmp);
 	return ret;
+}
+
+static bool ensure_dir(const char * path) {
+	if (!access(path, W_OK))
+		return true;
+	return errno == ENOENT ? mkdir_parent(path) : false;
 }
 
 char *_cat_with(char c, ...) {
