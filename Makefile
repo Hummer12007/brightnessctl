@@ -1,7 +1,7 @@
 include config.mk
 
 VERSION = 0.5
-CFLAGS += -std=c99 -g -Wall -Wextra -DVERSION=\"${VERSION}\" -D_POSIX_C_SOURCE=200809L
+CFLAGS += -std=c99 -O3 -Wall -Wextra -DVERSION=\"${VERSION}\" -D_POSIX_C_SOURCE=200809L
 LDLIBS += -lm
 
 BINDIR = ${DESTDIR}${PREFIX}/bin
