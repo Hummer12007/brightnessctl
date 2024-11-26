@@ -265,12 +265,16 @@ int process_device(struct device *dev) {
 		}
 		free(file_path);
 	}
+	mode_t old = umask(0);
 	char *sys_run_dir = getenv("XDG_RUNTIME_DIR");
-	if (sys_run_dir)
+	if (sys_run_dir) {
+		umask(0077);
 		run_dir = dir_child(sys_run_dir, "brightnessctl");
+	}
 	if (p.save)
 		if (!save_device_data(dev))
 			fprintf(stderr, "Could not save data for device '%s'.\n", dev->id);
+	umask(old);
 	if (p.restore) {
 		if (restore_device_data(dev))
 			p.operation = RESTORE;
@@ -563,9 +567,7 @@ bool save_device_data(struct device *dev) {
 	char *d_path = dir_child(c_path, dev->id);
 	bool ret = true;
 	if (mkdir_parent(c_path)) {
-		mode_t old = umask(0);
 		FILE *fp = fopen(d_path, "wb");
-		umask(old);
 		if (fp) {
 			fwrite(&dev->curr_brightness, sizeof(dev->curr_brightness), 1, fp);
 			if (ferror(fp)) {
