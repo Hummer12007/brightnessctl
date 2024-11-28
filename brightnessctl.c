@@ -26,6 +26,18 @@
 # endif
 #endif
 
+#define min(a, b) ({ \
+	__auto_type _a = (a); \
+	__auto_type _b = (b); \
+	_a < _b ? _a : _b; })
+
+#define max(a, b) ({ \
+	__auto_type _a = (a); \
+	__auto_type _b = (b); \
+	_a > _b ? _a : _b; })
+
+#define clamp(val, lo, hi) min(max(val, lo), hi)
+
 static char *path = "/sys/class";
 static char *classes[] = { "backlight", "leds", NULL };
 
@@ -76,14 +88,12 @@ struct device {
 };
 
 enum value_type { ABSOLUTE, RELATIVE };
-enum delta_type { DIRECT, DELTA };
-enum sign { PLUS, MINUS };
+enum delta_type { DIRECT, PLUS, MINUS };
 
 struct value {
 	unsigned long val;
 	enum value_type v_type;
 	enum delta_type d_type;
-	enum sign sign;
 };
 
 enum operation { INFO, GET, MAX, SET, RESTORE };
@@ -133,7 +143,7 @@ int main(int argc, char **argv) {
 	int ret = 0;
 	int n, c, phelp = 0;
 	p.exponent = 1;
-	p.min = (struct value){ .val = 0, .v_type = ABSOLUTE, .d_type = DIRECT, .sign = PLUS };
+	p.min = (struct value){ .val = 0, .v_type = ABSOLUTE, .d_type = DIRECT };
 	while ((c = getopt_long(argc, argv, "lqpmPn::e::srhVc:d:", options, NULL)) >= 0) {
 		switch (c) {
 		case 'l':
@@ -159,10 +169,10 @@ int main(int argc, char **argv) {
 			break;
 		case 'n':
 			if (optarg) {
-				if (!parse_value(&p.min, optarg) || p.min.sign == MINUS)
+				if (!parse_value(&p.min, optarg) || p.min.d_type == MINUS)
 					fail("Invalid min-value given\n");
 			} else if (NULL != argv[optind] && '-' != argv[optind][0]) {
-				if (!parse_value(&p.min, argv[optind++]) || p.min.sign == MINUS)
+				if (!parse_value(&p.min, argv[optind++]) || p.min.d_type == MINUS)
 					fail("Invalid min-value given\n");
 			} else {
 				p.min.val = 1;
@@ -317,12 +327,10 @@ bool parse_value(struct value *val, char *str) {
 	errno = 0;
 	val->v_type = ABSOLUTE;
 	val->d_type = DIRECT;
-	val->sign = PLUS;
 	if (!str || !*str)
 		return false;
 	if (*str == '+' || *str == '-') {
-		val->sign = *str == '+' ? PLUS : MINUS;
-		val->d_type = DELTA;
+		val->d_type = *str == '+' ? PLUS : MINUS;
 		str++;
 	}
 	n = strtol(str, &buf, 10);
@@ -331,12 +339,10 @@ bool parse_value(struct value *val, char *str) {
 	val->val = labs(n) % LONG_MAX;
 	while ((c = *(buf++))) switch(c) {
 	case '+':
-		val->sign = PLUS;
-		val->d_type = DELTA;
+		val->d_type = PLUS;
 		break;
 	case '-':
-		val->sign = MINUS;
-		val->d_type = DELTA;
+		val->d_type = MINUS;
 		break;
 	case '%':
 		val->v_type = RELATIVE;
@@ -384,31 +390,26 @@ void print_device(struct device *dev) {
 }
 
 unsigned int calc_value(struct device *d, struct value *val) {
-	long new = d->curr_brightness;
-	if (val->d_type == DIRECT) {
-		new = val->v_type == ABSOLUTE ? val->val : percent_to_val(val->val, d);
-		goto apply;
+	unsigned long new = val->v_type == ABSOLUTE ? d->curr_brightness :
+		val_to_percent(d->curr_brightness, d, false);
+	switch (val->d_type) {
+	case DIRECT:
+		new = val->val;
+		break;
+	case PLUS:
+		new = new + val->val;
+		break;
+	case MINUS:
+		new = new - val->val;
+		break;
 	}
-	long mod = val->val;
-	if (val->sign == MINUS)
-		mod *= -1;
-	if (val->v_type == RELATIVE) {
-		mod = percent_to_val(val_to_percent(d->curr_brightness, d, false) + mod, d) - d->curr_brightness;
-		if (val->val != 0 && mod == 0)
-			mod = val->sign == PLUS ? 1 : -1;
-	}
-	new += mod;
-apply:
+	if (val->v_type == RELATIVE)
+		new = percent_to_val(new, d);
 	if (p.min.v_type == RELATIVE) {
 		p.min.val = percent_to_val(p.min.val, d);
 		p.min.v_type = ABSOLUTE;
 	}
-	if (new < (long)p.min.val)
-		new = p.min.val;
-	if (new < 0)
-		new = 0;
-	if (new > d->max_brightness)
-		new = d->max_brightness;
+	new = clamp(new, max(p.min.val, 0UL), d->max_brightness);
 	return new;
 }
 
