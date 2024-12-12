@@ -559,7 +559,7 @@ int read_devices(struct device **devs) {
 bool save_device_data(struct device *dev) {
 	char c[16];
 	size_t s = sprintf(c, "%u", dev->curr_brightness);
-	char *d_path = cat_with('/', run_dir, dev->class, dev->id);
+	char *d_path = NULL;
 	FILE *fp;
 	mode_t old = 0;
 	int error = 0;
@@ -571,6 +571,7 @@ bool save_device_data(struct device *dev) {
 	}
 	if (!ensure_dev_dir(dev))
 		goto fail;
+	d_path = cat_with('/', run_dir, dev->class, dev->id);
 	old = umask(0);
 	fp = fopen(d_path, "w");
 	umask(old);
@@ -592,11 +593,14 @@ fail:
 
 bool restore_device_data(struct device *dev) {
 	char buf[16];
-	char *filename = cat_with('/', run_dir, dev->class, dev->id);
+	char *filename = NULL;
 	char *end;
 	FILE *fp;
 	memset(buf, 0, 16);
 	errno = 0;
+	if (!ensure_dev_dir(dev))
+		goto fail;
+	filename = cat_with('/', run_dir, dev->class, dev->id);
 	if (!(fp = fopen(filename, "r")))
 		goto fail;
 	if (!fread(buf, 1, 15, fp))
