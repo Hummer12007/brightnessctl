@@ -22,7 +22,7 @@ One can build and install the program using `./configure && make install`. Consu
 
 Modifying brightness requires write permissions for device files or systemd support. `brightnessctl` accomplishes this (without using `sudo`/`su`/etc.) by either of the following means:
 
-1) installing relevant udev rules to add permissions to backlight class devices for users in `video` and leds for users in `input`. (done by default)
+1) installing relevant udev rules to add permissions to backlight class devices for users in `video` and leds for users in `input`. This requires your user to be in the `video` and `input` groups. (done by default)
 
 2) installing `brightnessctl` as a suid binary.
 
