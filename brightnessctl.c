@@ -80,7 +80,10 @@ enum delta_type { DIRECT, DELTA };
 enum sign { PLUS, MINUS };
 
 struct value {
-	unsigned long val;
+	union {
+		unsigned long val;
+		float percentage;
+	};
 	enum value_type v_type;
 	enum delta_type d_type;
 	enum sign sign;
@@ -311,7 +314,7 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 }
 
 bool parse_value(struct value *val, char *str) {
-	long n;
+	double n;
 	char c;
 	char *buf;
 	errno = 0;
@@ -325,10 +328,9 @@ bool parse_value(struct value *val, char *str) {
 		val->d_type = DELTA;
 		str++;
 	}
-	n = strtol(str, &buf, 10);
+	n = strtod(str, &buf);
 	if (errno || buf == str)
 		return false;
-	val->val = labs(n) % LONG_MAX;
 	while ((c = *(buf++))) switch(c) {
 	case '+':
 		val->sign = PLUS;
@@ -341,6 +343,11 @@ bool parse_value(struct value *val, char *str) {
 	case '%':
 		val->v_type = RELATIVE;
 		break;
+	}
+	if (val->v_type == RELATIVE) {
+		val->percentage = n;
+	} else {
+		val->val = labs((long) n) % LONG_MAX;
 	}
 	return true;
 }
@@ -386,21 +393,22 @@ void print_device(struct device *dev) {
 unsigned int calc_value(struct device *d, struct value *val) {
 	long new = d->curr_brightness;
 	if (val->d_type == DIRECT) {
-		new = val->v_type == ABSOLUTE ? val->val : percent_to_val(val->val, d);
+		new = val->v_type == ABSOLUTE ? val->val : percent_to_val(val->percentage, d);
 		goto apply;
 	}
-	long mod = val->val;
-	if (val->sign == MINUS)
-		mod *= -1;
+	int sign_mod = val->sign == MINUS ? -1 : 1;
+	long mod;
 	if (val->v_type == RELATIVE) {
-		mod = percent_to_val(val_to_percent(d->curr_brightness, d, false) + mod, d) - d->curr_brightness;
-		if (val->val != 0 && mod == 0)
+		mod = percent_to_val(val_to_percent(d->curr_brightness, d, false) + val->percentage * sign_mod, d) - d->curr_brightness;
+		if (val->percentage != 0 && mod == 0)
 			mod = val->sign == PLUS ? 1 : -1;
+	} else {
+		mod = val->val * sign_mod;
 	}
 	new += mod;
 apply:
 	if (p.min.v_type == RELATIVE) {
-		p.min.val = percent_to_val(p.min.val, d);
+		p.min.val = percent_to_val(p.min.percentage, d);
 		p.min.v_type = ABSOLUTE;
 	}
 	if (new < (long)p.min.val)
