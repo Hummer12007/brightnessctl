@@ -104,6 +104,7 @@ struct params {
 	bool percentage;
 	bool save;
 	bool restore;
+	bool frac;
 	float exponent;
 };
 
@@ -123,6 +124,7 @@ static const struct option options[] = {
 	{"restore", no_argument, NULL, 'r'},
 	{"save", no_argument, NULL, 's'},
 	{"version", no_argument, NULL, 'V'},
+	{"frac", no_argument, NULL, 0},
 	{NULL,}
 };
 
@@ -191,6 +193,9 @@ int main(int argc, char **argv) {
 		case 'V':
 			printf("%s\n", VERSION);
 			exit(0);
+			break;
+		case 0:
+			p.frac = true;
 			break;
 		default:
 			phelp++;
@@ -286,7 +291,7 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 		return 0;
 	case GET:
 		if (p.percentage)
-			fprintf(stdout, "%d\n", (int) val_to_percent(dev->curr_brightness, dev, true));
+			fprintf(stdout, "%.4g\n", val_to_percent(dev->curr_brightness, dev, !p.frac));
 		else
 			fprintf(stdout, "%u\n", dev->curr_brightness);
 		return 0;
@@ -381,12 +386,12 @@ unsigned long percent_to_val(float percent, struct device *d) {
 }
 
 void print_device(struct device *dev) {
-	char *format = p.mach ? "%s,%s,%d,%d%%,%d\n" :
-		"Device '%s' of class '%s':\n\tCurrent brightness: %d (%d%%)\n\tMax brightness: %d\n\n";
+	char *format = p.mach ? "%s,%s,%d,%.4g%%,%d\n" :
+		"Device '%s' of class '%s':\n\tCurrent brightness: %d (%.4g%%)\n\tMax brightness: %d\n\n";
 	fprintf(stdout, format,
 		dev->id, dev->class,
 		dev->curr_brightness,
-		(int) val_to_percent(dev->curr_brightness, dev, true),
+		val_to_percent(dev->curr_brightness, dev, !p.frac),
 		dev->max_brightness);
 }
 
@@ -738,6 +743,7 @@ Options:\n\
   -d, --device=DEVICE        \tspecify device name (can be a wildcard).\n\
   -c, --class=CLASS          \tspecify device class.\n\
   -V, --version              \tprint version and exit.\n\
+  --frac		     \tenable fractional percentage output.\n\
 \n\
 Operations:\n\
   i, info                    \tget device info.\n\
