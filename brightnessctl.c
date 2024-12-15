@@ -222,7 +222,7 @@ int main(int argc, char **argv) {
 	}
 	dev_name = p.device;
 	if (!dev_name)
-		dev_name = devs[0]->id;
+		dev_name = p.class ? "*" : devs[0]->id;
 	if (argc == 0)
 		p.operation = INFO;
 	else switch (argv[0][0]) {
