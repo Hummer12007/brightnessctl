@@ -80,7 +80,10 @@ enum delta_type { DIRECT, DELTA };
 enum sign { PLUS, MINUS };
 
 struct value {
-	unsigned long val;
+	union {
+		unsigned long val;
+		float percentage;
+	};
 	enum value_type v_type;
 	enum delta_type d_type;
 	enum sign sign;
@@ -101,6 +104,7 @@ struct params {
 	bool percentage;
 	bool save;
 	bool restore;
+	bool frac;
 	float exponent;
 };
 
@@ -120,6 +124,7 @@ static const struct option options[] = {
 	{"restore", no_argument, NULL, 'r'},
 	{"save", no_argument, NULL, 's'},
 	{"version", no_argument, NULL, 'V'},
+	{"frac", no_argument, NULL, 0},
 	{NULL,}
 };
 
@@ -188,6 +193,9 @@ int main(int argc, char **argv) {
 		case 'V':
 			printf("%s\n", VERSION);
 			exit(0);
+			break;
+		case 0:
+			p.frac = true;
 			break;
 		default:
 			phelp++;
@@ -283,7 +291,7 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 		return 0;
 	case GET:
 		if (p.percentage)
-			fprintf(stdout, "%d\n", (int) val_to_percent(dev->curr_brightness, dev, true));
+			fprintf(stdout, "%.4g\n", val_to_percent(dev->curr_brightness, dev, !p.frac));
 		else
 			fprintf(stdout, "%u\n", dev->curr_brightness);
 		return 0;
@@ -311,7 +319,7 @@ int apply_operation(struct device *dev, enum operation operation, struct value *
 }
 
 bool parse_value(struct value *val, char *str) {
-	long n;
+	double n;
 	char c;
 	char *buf;
 	errno = 0;
@@ -325,10 +333,9 @@ bool parse_value(struct value *val, char *str) {
 		val->d_type = DELTA;
 		str++;
 	}
-	n = strtol(str, &buf, 10);
+	n = strtod(str, &buf);
 	if (errno || buf == str)
 		return false;
-	val->val = labs(n) % LONG_MAX;
 	while ((c = *(buf++))) switch(c) {
 	case '+':
 		val->sign = PLUS;
@@ -341,6 +348,11 @@ bool parse_value(struct value *val, char *str) {
 	case '%':
 		val->v_type = RELATIVE;
 		break;
+	}
+	if (val->v_type == RELATIVE) {
+		val->percentage = n;
+	} else {
+		val->val = labs((long) n) % LONG_MAX;
 	}
 	return true;
 }
@@ -374,33 +386,39 @@ unsigned long percent_to_val(float percent, struct device *d) {
 }
 
 void print_device(struct device *dev) {
-	char *format = p.mach ? "%s,%s,%d,%d%%,%d\n" :
-		"Device '%s' of class '%s':\n\tCurrent brightness: %d (%d%%)\n\tMax brightness: %d\n\n";
+	char *format = p.mach ? "%s,%s,%d,%.4g%%,%d\n" :
+		"Device '%s' of class '%s':\n\tCurrent brightness: %d (%.4g%%)\n\tMax brightness: %d\n\n";
 	fprintf(stdout, format,
 		dev->id, dev->class,
 		dev->curr_brightness,
-		(int) val_to_percent(dev->curr_brightness, dev, true),
+		val_to_percent(dev->curr_brightness, dev, !p.frac),
 		dev->max_brightness);
 }
 
 unsigned int calc_value(struct device *d, struct value *val) {
 	long new = d->curr_brightness;
 	if (val->d_type == DIRECT) {
-		new = val->v_type == ABSOLUTE ? val->val : percent_to_val(val->val, d);
+		new = val->v_type == ABSOLUTE ? val->val : percent_to_val(val->percentage, d);
 		goto apply;
 	}
-	long mod = val->val;
-	if (val->sign == MINUS)
-		mod *= -1;
+	int sign_mod = val->sign == MINUS ? -1 : 1;
+	long mod;
 	if (val->v_type == RELATIVE) {
-		mod = percent_to_val(val_to_percent(d->curr_brightness, d, false) + mod, d) - d->curr_brightness;
-		if (val->val != 0 && mod == 0)
+		float cur_pct = val_to_percent(d->curr_brightness, d, false);
+		float cur_rnd = nearbyintf(cur_pct);
+		if (mod == nearbyintf(mod) && cur_pct != cur_rnd && percent_to_val(cur_pct, d) == percent_to_val(cur_rnd, d))
+			cur_pct = cur_rnd;
+
+		mod = percent_to_val(val_to_percent(d->curr_brightness, d, false) + val->percentage * sign_mod, d) - d->curr_brightness;
+		if (val->percentage != 0 && mod == 0)
 			mod = val->sign == PLUS ? 1 : -1;
+	} else {
+		mod = val->val * sign_mod;
 	}
 	new += mod;
 apply:
 	if (p.min.v_type == RELATIVE) {
-		p.min.val = percent_to_val(p.min.val, d);
+		p.min.val = percent_to_val(p.min.percentage, d);
 		p.min.v_type = ABSOLUTE;
 	}
 	if (new < (long)p.min.val)
@@ -730,6 +748,7 @@ Options:\n\
   -d, --device=DEVICE        \tspecify device name (can be a wildcard).\n\
   -c, --class=CLASS          \tspecify device class.\n\
   -V, --version              \tprint version and exit.\n\
+  --frac		     \tenable fractional percentage output.\n\
 \n\
 Operations:\n\
   i, info                    \tget device info.\n\
