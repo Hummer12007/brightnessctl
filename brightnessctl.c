@@ -404,6 +404,11 @@ unsigned int calc_value(struct device *d, struct value *val) {
 	int sign_mod = val->sign == MINUS ? -1 : 1;
 	long mod;
 	if (val->v_type == RELATIVE) {
+		float cur_pct = val_to_percent(d->curr_brightness, d, false);
+		float cur_rnd = nearbyintf(cur_pct);
+		if (mod == nearbyintf(mod) && cur_pct != cur_rnd && percent_to_val(cur_pct, d) == percent_to_val(cur_rnd, d))
+			cur_pct = cur_rnd;
+
 		mod = percent_to_val(val_to_percent(d->curr_brightness, d, false) + val->percentage * sign_mod, d) - d->curr_brightness;
 		if (val->percentage != 0 && mod == 0)
 			mod = val->sign == PLUS ? 1 : -1;
