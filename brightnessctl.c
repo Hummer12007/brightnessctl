@@ -67,6 +67,18 @@ static bool ensure_dev_dir(struct device *);
 static bool logind_set_brightness(struct device *);
 #endif
 
+#define min(a, b) ({ \
+	__auto_type _a = (a); \
+	__auto_type _b = (b); \
+	_a < _b ? _a : _b; })
+
+#define max(a, b) ({ \
+	__auto_type _a = (a); \
+	__auto_type _b = (b); \
+	_a > _b ? _a : _b; })
+
+#define clamp(val, lo, hi) min(max(val, lo), hi)
+
 struct device {
 	char *class;
 	char *id;
@@ -391,30 +403,40 @@ void print_device(struct device *dev) {
 
 unsigned int calc_value(struct device *d, struct value *val) {
 	long new = d->curr_brightness;
-	if (val->d_type == DIRECT) {
-		new = val->v_type == ABSOLUTE ? val->val : percent_to_val(val->percentage, d);
-		goto apply;
+	if (val->v_type == ABSOLUTE) {
+		switch (val->d_type) {
+		case DIRECT:
+			new = val->val;
+			break;
+		case PLUS:
+			new = d->curr_brightness + val->val;
+			break;
+		case MINUS:
+			new = d->curr_brightness - val->val;
+			break;
+		}
+	} else {
+		float curr_pct = val_to_percent(d->curr_brightness, d, false);
+		float bias = curr_pct + val->percentage > roundf(curr_pct + val->percentage) ?
+			-1.0f / d->max_brightness :
+			 1.0f / d->max_brightness;
+		switch (val->d_type) {
+		case DIRECT:
+			new = percent_to_val(val->percentage, d);
+			break;
+		case PLUS:
+			new = percent_to_val(curr_pct + val->percentage + bias, d);
+			break;
+		case MINUS:
+			new = percent_to_val(curr_pct - val->percentage + bias, d);
+			break;
+		}
 	}
-	long mod = val->val;
-	if (val->d_type == MINUS)
-		mod *= -1;
-	if (val->v_type == PERCENT) {
-		mod = percent_to_val(val_to_percent(d->curr_brightness, d, false) + mod, d) - d->curr_brightness;
-		if (val->val != 0 && mod == 0)
-			mod = val->d_type == PLUS ? 1 : -1;
-	}
-	new += mod;
-apply:
 	if (p.min.v_type == PERCENT) {
 		p.min.val = percent_to_val(p.min.percentage, d);
 		p.min.v_type = ABSOLUTE;
 	}
-	if (new < (long)p.min.val)
-		new = p.min.val;
-	if (new < 0)
-		new = 0;
-	if (new > d->max_brightness)
-		new = d->max_brightness;
+	new = clamp(new, (long)p.min.val, (long)d->max_brightness);
 	return new;
 }
 
