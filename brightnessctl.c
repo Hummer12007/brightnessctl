@@ -75,7 +75,7 @@ struct device {
 	bool matches;
 };
 
-enum value_type { ABSOLUTE, RELATIVE };
+enum value_type { ABSOLUTE, PERCENT };
 enum delta_type { DIRECT, PLUS, MINUS };
 
 struct value {
@@ -340,10 +340,10 @@ bool parse_value(struct value *val, char *str) {
 		val->d_type = MINUS;
 		break;
 	case '%':
-		val->v_type = RELATIVE;
+		val->v_type = PERCENT;
 		break;
 	}
-	if (val->v_type == RELATIVE) {
+	if (val->v_type == PERCENT) {
 		val->percentage = n;
 	} else {
 		val->val = labs((long) n) % LONG_MAX;
@@ -398,14 +398,14 @@ unsigned int calc_value(struct device *d, struct value *val) {
 	long mod = val->val;
 	if (val->d_type == MINUS)
 		mod *= -1;
-	if (val->v_type == RELATIVE) {
+	if (val->v_type == PERCENT) {
 		mod = percent_to_val(val_to_percent(d->curr_brightness, d, false) + mod, d) - d->curr_brightness;
 		if (val->val != 0 && mod == 0)
 			mod = val->d_type == PLUS ? 1 : -1;
 	}
 	new += mod;
 apply:
-	if (p.min.v_type == RELATIVE) {
+	if (p.min.v_type == PERCENT) {
 		p.min.val = percent_to_val(p.min.percentage, d);
 		p.min.v_type = ABSOLUTE;
 	}
